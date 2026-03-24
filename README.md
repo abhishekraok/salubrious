@@ -96,4 +96,4 @@ make db-reset  # Delete database and reseed
 
 ## License
 
-MIT
+Apache 2.0 — see [LICENSE](LICENSE)
