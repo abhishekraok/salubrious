@@ -1050,33 +1050,25 @@ The MVP is successful if:
 
 Use this sample structure during development:
 
-### Target portfolio example
+### Target portfolio example (Bernstein 3-fund)
 
-- VXUS 36
-- VTI 12
-- AVDV 11
-- AVUV 11
-- VGIT 12
-- VTIP 11
-- SGOV 7
+- VTI 34
+- VXUS 33
+- BND 33
 
 ### Spending example
 
-- baseline annual spending = 100000
-- comfortable annual spending = 120000
-- emergency annual spending = 70000
+- baseline annual spending = 40000
+- comfortable annual spending = 50000
+- emergency annual spending = 30000
 - target safe asset runway = 4 years
-- minimum cash reserve = 50000
+- minimum cash reserve = 10000
 
 ### Band example defaults
 
-- VTI: soft 1.5, hard 2.0
-- VXUS: soft 2.0, hard 3.0
-- AVUV: soft 1.5, hard 2.0
-- AVDV: soft 1.5, hard 2.0
-- VGIT: soft 1.5, hard 2.0
-- VTIP: soft 1.5, hard 2.0
-- SGOV: soft 1.0, hard 1.5
+- VTI: soft 4.2, hard 8.5
+- VXUS: soft 4.1, hard 8.2
+- BND: soft 4.1, hard 8.2
 
 ---
 
