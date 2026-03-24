@@ -13,7 +13,7 @@ This is not a trading app. There are no daily P/L charts, no red/green flashing 
 
 ## Screenshots
 
-<!-- Add screenshots here -->
+![Salubrious screenshot](docs/screenshot.png)
 
 ## Quick Start
 
