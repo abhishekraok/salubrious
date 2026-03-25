@@ -4,10 +4,16 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useApi } from '../hooks/useApi';
 import { post, put } from '../api/client';
-import type { SpendingRunway, SpendingGuidance, InvestmentPolicy } from '../types';
+import type { SpendingRunway, SpendingGuidance, InvestmentPolicy, SimulationResult } from '../types';
 
 function formatDollars(n: number) {
   return '$' + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+function formatCompact(n: number) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
 }
 
 interface ScenarioResult {
@@ -52,10 +58,84 @@ function StackedBar({ segments, total }: {
   );
 }
 
+/* SVG fan chart for wealth trajectory */
+function WealthTrajectoryChart({ sim }: { sim: SimulationResult }) {
+  const W = 600;
+  const H = 280;
+  const pad = { top: 20, right: 20, bottom: 40, left: 65 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+
+  const n = sim.years.length;
+  const maxVal = Math.max(...sim.p95);
+  const yMax = maxVal > 0 ? maxVal * 1.05 : 1;
+
+  const x = (i: number) => pad.left + (i / (n - 1)) * chartW;
+  const y = (v: number) => pad.top + chartH - (v / yMax) * chartH;
+
+  // Build area paths for percentile bands
+  const bandPath = (upper: number[], lower: number[]) => {
+    const forward = upper.map((_, i) => `${x(i)},${y(upper[i])}`).join(' L');
+    const backward = [...lower].reverse().map((_, i) => `${x(n - 1 - i)},${y(lower[n - 1 - i])}`).join(' L');
+    return `M${forward} L${backward} Z`;
+  };
+
+  // Y-axis ticks
+  const yTickCount = 5;
+  const yTicks = Array.from({ length: yTickCount + 1 }, (_, i) => (yMax / yTickCount) * i);
+
+  // X-axis ticks (every 10 years)
+  const xTicks = sim.years.filter(yr => yr % 10 === 0 || yr === sim.years[sim.years.length - 1]);
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: '320px' }}>
+      {/* Grid lines */}
+      {yTicks.map((v, i) => (
+        <line key={i} x1={pad.left} x2={W - pad.right} y1={y(v)} y2={y(v)}
+          stroke="#e5e5e0" strokeWidth={0.5} />
+      ))}
+
+      {/* 5th-95th band */}
+      <path d={bandPath(sim.p95, sim.p5)} fill="#6b8e7b" opacity={0.12} />
+      {/* 25th-75th band */}
+      <path d={bandPath(sim.p75, sim.p25)} fill="#6b8e7b" opacity={0.2} />
+
+      {/* Median line */}
+      <polyline
+        points={sim.p50.map((v, i) => `${x(i)},${y(v)}`).join(' ')}
+        fill="none" stroke="#6b8e7b" strokeWidth={2}
+      />
+
+      {/* Zero line */}
+      <line x1={pad.left} x2={W - pad.right} y1={y(0)} y2={y(0)}
+        stroke="#c4785b" strokeWidth={1} strokeDasharray="4,3" opacity={0.6} />
+
+      {/* Y-axis labels */}
+      {yTicks.map((v, i) => (
+        <text key={i} x={pad.left - 8} y={y(v) + 4} textAnchor="end"
+          className="text-[10px] fill-calm-muted">{formatCompact(v)}</text>
+      ))}
+
+      {/* X-axis labels */}
+      {xTicks.map((yr) => (
+        <text key={yr} x={x(yr)} y={H - pad.bottom + 18} textAnchor="middle"
+          className="text-[10px] fill-calm-muted">Yr {yr}</text>
+      ))}
+
+      {/* Axis lines */}
+      <line x1={pad.left} x2={pad.left} y1={pad.top} y2={H - pad.bottom}
+        stroke="#ccc" strokeWidth={1} />
+      <line x1={pad.left} x2={W - pad.right} y1={H - pad.bottom} y2={H - pad.bottom}
+        stroke="#ccc" strokeWidth={1} />
+    </svg>
+  );
+}
+
 export function SpendingPage() {
   const { data: runway } = useApi<SpendingRunway>('/spending/runway');
   const { data: guidance, refetch: refetchGuidance } = useApi<SpendingGuidance>('/spending/guidance');
   const { data: policy, refetch: refetchPolicy } = useApi<InvestmentPolicy>('/policy');
+  const { data: simulation } = useApi<SimulationResult>('/spending/simulation');
   const [scenario, setScenario] = useState<ScenarioResult | null>(null);
   const [scenarioInputs, setScenarioInputs] = useState({
     spending_delta: 0,
@@ -126,6 +206,12 @@ export function SpendingPage() {
     const result = await post<ScenarioResult>('/spending/scenario', scenarioInputs);
     setScenario(result);
   };
+
+  const ruinColor = simulation
+    ? simulation.ruin_probability <= 0.05 ? '#6b8e7b'
+    : simulation.ruin_probability <= 0.15 ? '#c9a227'
+    : '#c4785b'
+    : '#6b8e7b';
 
   return (
     <div className="space-y-6">
@@ -259,6 +345,47 @@ export function SpendingPage() {
               />
             </div>
           </div>
+        </Card>
+      )}
+
+      {/* Monte Carlo Simulation */}
+      {simulation && (
+        <Card>
+          <div className="flex items-baseline justify-between mb-4">
+            <h3 className="text-sm font-medium text-calm-muted uppercase tracking-wide">Wealth Trajectory</h3>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-calm-muted">
+                Ruin probability:
+              </span>
+              <span className="text-lg font-semibold" style={{ color: ruinColor }}>
+                {(simulation.ruin_probability * 100).toFixed(1)}%
+              </span>
+            </div>
+          </div>
+
+          <WealthTrajectoryChart sim={simulation} />
+
+          <div className="flex items-center gap-6 mt-3 text-xs text-calm-muted">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-6 h-3 rounded-sm" style={{ backgroundColor: '#6b8e7b', opacity: 0.12 }} />
+              5th–95th percentile
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-6 h-3 rounded-sm" style={{ backgroundColor: '#6b8e7b', opacity: 0.3 }} />
+              25th–75th percentile
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-6 h-1 rounded-sm" style={{ backgroundColor: '#6b8e7b' }} />
+              Median
+            </div>
+          </div>
+
+          <p className="text-xs text-calm-muted mt-3">
+            2,000 simulations using historical return distributions.
+            Spending: {formatDollars(policy.baseline_annual_spending)}/yr.
+            {policy.expected_years_earning && policy.expected_years_earning > 0 &&
+              ` Salary of ${formatDollars(policy.expected_after_tax_salary || 0)}/yr for ${policy.expected_years_earning} years.`}
+          </p>
         </Card>
       )}
 

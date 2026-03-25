@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..engines.monte_carlo import SimulationParams, run_simulation
 from ..engines.spending import compute_spending_guidance, compute_spending_runway, run_scenario
 from ..models import Account, Holding, InvestmentPolicy, PortfolioSleeve, UserProfile
 
@@ -44,6 +45,36 @@ def get_guidance(db: Session = Depends(get_db)):
     holdings = db.query(Holding).filter(Holding.account_id.in_(account_ids)).all()
     guidance = compute_spending_guidance(holdings, policy)
     return asdict(guidance)
+
+
+@router.get("/simulation")
+def get_simulation(db: Session = Depends(get_db)):
+    """Run Monte Carlo simulation of wealth trajectory."""
+    user = db.query(UserProfile).first()
+    policy = db.query(InvestmentPolicy).filter(InvestmentPolicy.user_id == user.id).first()
+    sleeves = db.query(PortfolioSleeve).filter(PortfolioSleeve.policy_id == policy.id).all()
+    accounts = db.query(Account).filter(Account.user_id == user.id).all()
+    account_ids = [a.id for a in accounts]
+    holdings = db.query(Holding).filter(Holding.account_id.in_(account_ids)).all()
+
+    total_portfolio = sum(h.market_value for h in holdings)
+    equity_value = sum(
+        h.market_value for h in holdings
+        if any(s.ticker == h.ticker and s.asset_class == "equity" for s in sleeves)
+    )
+    equity_fraction = equity_value / total_portfolio if total_portfolio > 0 else 0.6
+
+    params = SimulationParams(
+        current_portfolio=total_portfolio,
+        annual_spending=policy.baseline_annual_spending or 0,
+        years_remaining=policy.expected_years_remaining or 50,
+        years_earning=policy.expected_years_earning or 0,
+        after_tax_salary=policy.expected_after_tax_salary or 0,
+        equity_fraction=equity_fraction,
+        withdrawal_rate_pct=policy.withdrawal_rate_pct,
+    )
+    result = run_simulation(params)
+    return asdict(result)
 
 
 @router.post("/scenario")

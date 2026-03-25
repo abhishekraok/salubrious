@@ -157,6 +157,20 @@ export interface SpendingGuidance {
   after_tax_salary: number | null;
 }
 
+export interface SimulationResult {
+  years: number[];
+  p5: number[];
+  p25: number[];
+  p50: number[];
+  p75: number[];
+  p95: number[];
+  ruin_probability: number;
+  ruin_by_year: number[];
+  spending_floor: number;
+  spending_recommended: number;
+  spending_ceiling: number;
+}
+
 export interface SpendingRunway {
   safe_asset_total: number;
   cash_like_total: number;
