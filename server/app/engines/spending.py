@@ -1,4 +1,4 @@
-"""Spending runway calculator."""
+"""Spending runway and guidance calculator."""
 
 from __future__ import annotations
 
@@ -73,6 +73,89 @@ def compute_spending_runway(
         cash_runway_years=round(cash_years, 1),
         funded_status=funded_status,
         above_minimum_reserve_by=round(above_reserve, 2),
+    )
+
+
+@dataclass
+class SpendingGuidance:
+    total_portfolio_value: float
+    withdrawal_rate_pct: float
+    recommended_annual_spending: float
+    current_baseline_spending: float
+    spending_status: str  # 'low', 'appropriate', 'high'
+    future_earnings_present_value: float
+    effective_wealth: float  # portfolio + PV of future earnings
+    effective_recommended_spending: float  # based on effective wealth
+    years_remaining: int | None
+    years_earning: int | None
+    after_tax_salary: float | None
+
+
+def compute_spending_guidance(
+    holdings: list[Holding],
+    policy: InvestmentPolicy,
+) -> SpendingGuidance:
+    """Compute recommended spending using variable percentage withdrawal with guardrails.
+
+    Uses the policy's withdrawal_rate_pct (default 3.5%) applied to total portfolio.
+    Incorporates future earnings as present value (discounted at 3% real) to compute
+    effective wealth and a more nuanced recommendation.
+    """
+    total_value = sum(h.market_value for h in holdings)
+    rate = policy.withdrawal_rate_pct / 100.0
+
+    # Base recommendation: withdrawal rate * portfolio
+    base_recommended = total_value * rate
+
+    # Present value of future earnings (discounted at 3% real rate)
+    discount_rate = 0.03
+    pv_earnings = 0.0
+    years_earning = policy.expected_years_earning
+    salary = policy.expected_after_tax_salary
+    if years_earning and salary and salary > 0:
+        # PV of annuity: salary * (1 - (1+r)^-n) / r
+        if discount_rate > 0:
+            pv_earnings = salary * (1 - (1 + discount_rate) ** -years_earning) / discount_rate
+        else:
+            pv_earnings = salary * years_earning
+
+    effective_wealth = total_value + pv_earnings
+
+    # Effective recommended: withdrawal rate applied to effective wealth.
+    # During accumulation (still earning), effective wealth includes PV of
+    # future earnings, so the recommended spend is higher than portfolio-only.
+    # We cap at salary to avoid recommending more than you earn.
+    effective_recommended = effective_wealth * rate
+
+    if pv_earnings > 0 and salary and salary > 0:
+        # Don't recommend spending more than current salary
+        recommended = min(effective_recommended, salary)
+    else:
+        recommended = base_recommended
+
+    # Determine status relative to current baseline spending
+    baseline = policy.baseline_annual_spending or 0
+    if baseline <= 0:
+        status = "appropriate"
+    elif baseline < recommended * 0.85:
+        status = "low"
+    elif baseline > recommended * 1.15:
+        status = "high"
+    else:
+        status = "appropriate"
+
+    return SpendingGuidance(
+        total_portfolio_value=round(total_value, 2),
+        withdrawal_rate_pct=policy.withdrawal_rate_pct,
+        recommended_annual_spending=round(recommended, 0),
+        current_baseline_spending=round(baseline, 0),
+        spending_status=status,
+        future_earnings_present_value=round(pv_earnings, 0),
+        effective_wealth=round(effective_wealth, 0),
+        effective_recommended_spending=round(effective_recommended, 0),
+        years_remaining=policy.expected_years_remaining,
+        years_earning=policy.expected_years_earning,
+        after_tax_salary=policy.expected_after_tax_salary,
     )
 
 

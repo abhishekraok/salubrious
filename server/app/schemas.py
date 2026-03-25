@@ -55,6 +55,10 @@ class InvestmentPolicyOut(BaseModel):
     emergency_annual_spending: float
     safe_asset_runway_years_target: float
     minimum_cash_reserve: float
+    expected_years_remaining: Optional[int]
+    expected_years_earning: Optional[int]
+    expected_after_tax_salary: Optional[float]
+    withdrawal_rate_pct: float
     targeting_mode: str
     target_equity_pct: Optional[float]
     target_international_pct: Optional[float]
@@ -80,6 +84,10 @@ class InvestmentPolicyUpdate(BaseModel):
     emergency_annual_spending: Optional[float] = None
     safe_asset_runway_years_target: Optional[float] = None
     minimum_cash_reserve: Optional[float] = None
+    expected_years_remaining: Optional[int] = None
+    expected_years_earning: Optional[int] = None
+    expected_after_tax_salary: Optional[float] = None
+    withdrawal_rate_pct: Optional[float] = None
     targeting_mode: Optional[str] = None
     target_equity_pct: Optional[float] = None
     target_international_pct: Optional[float] = None

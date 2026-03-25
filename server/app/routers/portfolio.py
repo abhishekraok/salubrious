@@ -9,7 +9,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Account, Holding, UserProfile
+from ..fund_metadata import lookup_fund
+from ..models import Account, Holding, InvestmentPolicy, PortfolioSleeve, UserProfile
 from ..schemas import (
     AccountCreate,
     AccountOut,
@@ -195,6 +196,41 @@ async def import_csv(account_id: int, file: UploadFile, db: Session = Depends(ge
                 as_of_date=date.today(),
             ))
         imported += 1
+
+    # Auto-create sleeve stubs for tickers not already in the fund list
+    policy = db.query(InvestmentPolicy).filter(
+        InvestmentPolicy.user_id == account.user_id
+    ).first()
+    if policy:
+        existing_tickers = {
+            s.ticker for s in
+            db.query(PortfolioSleeve).filter(PortfolioSleeve.policy_id == policy.id).all()
+        }
+        new_holdings = db.query(Holding).filter(
+            Holding.account_id == account_id,
+            ~Holding.ticker.in_(existing_tickers) if existing_tickers else True,
+        ).all()
+        for h in new_holdings:
+            if h.ticker not in existing_tickers:
+                meta = lookup_fund(h.ticker)
+                if meta:
+                    db.add(PortfolioSleeve(
+                        policy_id=policy.id,
+                        ticker=h.ticker,
+                        target_percent=0,
+                        **meta,
+                    ))
+                else:
+                    db.add(PortfolioSleeve(
+                        policy_id=policy.id,
+                        ticker=h.ticker,
+                        label=h.ticker,
+                        target_percent=0,
+                        asset_class="equity",
+                        is_safe_asset=False,
+                        is_cash_like=False,
+                    ))
+                existing_tickers.add(h.ticker)
 
     db.commit()
     return {"imported": imported}
