@@ -149,7 +149,7 @@ export function SpendingPage() {
   const { data: runway } = useApi<SpendingRunway>('/spending/runway');
   const { data: guidance, refetch: refetchGuidance } = useApi<SpendingGuidance>('/spending/guidance');
   const { data: policy, refetch: refetchPolicy } = useApi<InvestmentPolicy>('/policy');
-  const { data: simulation } = useApi<SimulationResult>('/spending/simulation');
+  const { data: simulation, refetch: refetchSimulation } = useApi<SimulationResult>('/spending/simulation');
   const [scenario, setScenario] = useState<ScenarioResult | null>(null);
   const [scenarioInputs, setScenarioInputs] = useState({
     spending_delta: 0,
@@ -196,6 +196,7 @@ export function SpendingPage() {
     setEditing(false);
     refetchPolicy();
     refetchGuidance();
+    refetchSimulation();
   };
 
   const fundedBadge = {
