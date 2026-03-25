@@ -68,10 +68,19 @@ function WealthTrajectoryChart({ sim }: { sim: SimulationResult }) {
 
   const n = sim.years.length;
   const maxVal = Math.max(...sim.p95);
-  const yMax = maxVal > 0 ? maxVal * 1.05 : 1;
+
+  // Log scale: floor at median/100 to keep bands visible, max from p95
+  const medianMax = Math.max(...sim.p50.filter(v => v > 0));
+  const logFloor = Math.max(medianMax / 100, 1);
+  const logMax = Math.log10(Math.max(maxVal, 10));
+  const logMin = Math.log10(logFloor);
+  const logRange = logMax - logMin;
 
   const x = (i: number) => pad.left + (i / (n - 1)) * chartW;
-  const y = (v: number) => pad.top + chartH - (v / yMax) * chartH;
+  const y = (v: number) => {
+    const logV = Math.log10(Math.max(v, logFloor));
+    return pad.top + chartH - ((logV - logMin) / logRange) * chartH;
+  };
 
   // Build area paths for percentile bands
   const bandPath = (upper: number[], lower: number[]) => {
@@ -80,9 +89,14 @@ function WealthTrajectoryChart({ sim }: { sim: SimulationResult }) {
     return `M${forward} L${backward} Z`;
   };
 
-  // Y-axis ticks
-  const yTickCount = 5;
-  const yTicks = Array.from({ length: yTickCount + 1 }, (_, i) => (yMax / yTickCount) * i);
+  // Y-axis ticks: powers of 10 that fit in range
+  const yTicks: number[] = [];
+  for (let exp = Math.floor(logMin); exp <= Math.ceil(logMax); exp++) {
+    const val = Math.pow(10, exp);
+    if (val >= logFloor && val <= Math.pow(10, logMax)) {
+      yTicks.push(val);
+    }
+  }
 
   // X-axis ticks (every 10 years)
   const xTicks = sim.years.filter(yr => yr % 10 === 0 || yr === sim.years[sim.years.length - 1]);
@@ -246,10 +260,10 @@ export function SpendingPage() {
               total={Math.max(guidance.recommended_annual_spending, guidance.current_baseline_spending)}
             />
             <p className="text-xs text-calm-muted mt-1.5">
-              Recommended {formatDollars(guidance.recommended_annual_spending)}/yr ({guidance.withdrawal_rate_pct}% of{' '}
+              {guidance.withdrawal_rate_pct}% of{' '}
               {guidance.future_earnings_present_value > 0
                 ? `${formatDollars(guidance.effective_wealth)} effective wealth`
-                : `${formatDollars(guidance.total_portfolio_value)} portfolio`})
+                : `${formatDollars(guidance.total_portfolio_value)} portfolio`}
             </p>
           </div>
 

@@ -121,15 +121,13 @@ def compute_spending_guidance(
 
     effective_wealth = total_value + pv_earnings
 
-    # Effective recommended: withdrawal rate applied to effective wealth.
-    # During accumulation (still earning), effective wealth includes PV of
-    # future earnings, so the recommended spend is higher than portfolio-only.
-    # We cap at salary to avoid recommending more than you earn.
+    # Recommended: withdrawal rate applied to effective wealth.
+    # During accumulation, effective wealth includes PV of future earnings,
+    # so recommended spending accounts for lifetime resources, not just portfolio.
     effective_recommended = effective_wealth * rate
 
-    if pv_earnings > 0 and salary and salary > 0:
-        # Don't recommend spending more than current salary
-        recommended = min(effective_recommended, salary)
+    if pv_earnings > 0:
+        recommended = effective_recommended
     else:
         recommended = base_recommended
 
