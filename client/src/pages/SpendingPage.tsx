@@ -17,73 +17,38 @@ interface ScenarioResult {
   impact_summary: string;
 }
 
-/* SVG Gauge for spending guidance */
-function SpendingGauge({ current, recommended, status }: {
-  current: number;
-  recommended: number;
-  status: 'low' | 'appropriate' | 'high';
+/* Stacked bar showing two segments with labels */
+function StackedBar({ segments, total }: {
+  segments: { label: string; value: number; color: string }[];
+  total: number;
 }) {
-  const size = 160;
-  const stroke = 14;
-  const r = (size - stroke) / 2;
-  const cx = size / 2;
-  const cy = size / 2;
-  const circumference = 2 * Math.PI * r;
-
-  // Map spending ratio to arc: 0% = empty, 200% of recommended = full
-  const ratio = recommended > 0 ? current / recommended : 0;
-  const clampedRatio = Math.min(ratio, 2);
-  const arcFraction = clampedRatio / 2; // full circle = 200% of recommended
-  const arcLength = circumference * arcFraction;
-
-  // Target tick at 50% of arc (= 100% of recommended)
-  const targetAngle = -90 + (0.5 * 360); // 50% around = 90 degrees
-  const targetRad = (targetAngle * Math.PI) / 180;
-  const tickInner = r - stroke / 2 - 2;
-  const tickOuter = r + stroke / 2 + 2;
-
-  const colors = {
-    low: '#6b8e7b',      // sage green (muted)
-    appropriate: '#6b8e7b',
-    high: '#c4785b',     // warm amber-red
-  };
-  const arcColor = colors[status];
-
-  const pctOfRecommended = recommended > 0 ? Math.round((current / recommended) * 100) : 0;
-
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      {/* Background track */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e5e0" strokeWidth={stroke} />
-      {/* Current spending arc */}
-      <circle
-        cx={cx} cy={cy} r={r}
-        fill="none"
-        stroke={arcColor}
-        strokeWidth={stroke}
-        strokeDasharray={`${arcLength} ${circumference - arcLength}`}
-        strokeDashoffset={circumference * 0.25}
-        strokeLinecap="round"
-        transform={`rotate(-90 ${cx} ${cy})`}
-      />
-      {/* Target tick mark */}
-      <line
-        x1={cx + tickInner * Math.cos(targetRad)}
-        y1={cy + tickInner * Math.sin(targetRad)}
-        x2={cx + tickOuter * Math.cos(targetRad)}
-        y2={cy + tickOuter * Math.sin(targetRad)}
-        stroke="#555"
-        strokeWidth={2.5}
-        strokeLinecap="round"
-      />
-      {/* Center text */}
-      <text x={cx} y={cy - 8} textAnchor="middle" className="text-lg font-semibold fill-calm-text">
-        {pctOfRecommended}%
-      </text>
-      <text x={cx} y={cy + 10} textAnchor="middle" className="text-[10px] fill-calm-muted">
-        of recommended
-      </text>
-    </svg>
+    <div>
+      <div className="flex h-7 rounded-md overflow-hidden bg-calm-border/30">
+        {segments.map((seg, i) => {
+          const pct = total > 0 ? (seg.value / total) * 100 : 0;
+          if (pct <= 0) return null;
+          return (
+            <div
+              key={i}
+              className="flex items-center justify-center text-[10px] font-medium text-white transition-all"
+              style={{ width: `${pct}%`, backgroundColor: seg.color }}
+              title={`${seg.label}: ${formatDollars(seg.value)}`}
+            >
+              {pct > 12 ? formatDollars(seg.value) : ''}
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex gap-4 mt-1.5">
+        {segments.map((seg, i) => (
+          <div key={i} className="flex items-center gap-1.5 text-xs text-calm-muted">
+            <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: seg.color }} />
+            {seg.label}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -174,40 +139,54 @@ export function SpendingPage() {
       {/* Spending Guidance */}
       <Card>
         <h3 className="text-sm font-medium text-calm-muted uppercase tracking-wide mb-4">Spending Guidance</h3>
-        <div className="flex items-start gap-8">
-          <SpendingGauge
-            current={guidance.current_baseline_spending}
-            recommended={guidance.recommended_annual_spending}
-            status={guidance.spending_status}
-          />
-          <div className="flex-1 space-y-3">
-            <div>
-              <p className="text-xs text-calm-muted">Recommended Annual Spending</p>
-              <p className="text-2xl font-semibold">{formatDollars(guidance.recommended_annual_spending)}</p>
-              <p className="text-xs text-calm-muted mt-0.5">
-                {guidance.withdrawal_rate_pct}% of {formatDollars(guidance.total_portfolio_value)} portfolio
-              </p>
+
+        <div className="space-y-5">
+          {/* Spending bar */}
+          <div>
+            <div className="flex items-baseline justify-between mb-2">
+              <p className="text-sm font-medium">Annual Spending</p>
+              <div className="flex items-center gap-2">
+                <Badge status={guidanceBadge}>
+                  {guidance.spending_status === 'low' ? 'Low' : guidance.spending_status === 'high' ? 'High' : 'OK'}
+                </Badge>
+                <span className="text-xs text-calm-muted">{guidanceLabel}</span>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-calm-muted">Current Baseline Spending</p>
-              <p className="text-lg font-medium">{formatDollars(guidance.current_baseline_spending)}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge status={guidanceBadge}>
-                {guidance.spending_status === 'low' ? 'Low' : guidance.spending_status === 'high' ? 'High' : 'OK'}
-              </Badge>
-              <span className="text-sm text-calm-muted">{guidanceLabel}</span>
-            </div>
-          </div>
-        </div>
-        {guidance.future_earnings_present_value > 0 && (
-          <div className="mt-4 pt-3 border-t border-calm-border text-sm text-calm-muted">
-            <p>
-              Future earnings (PV): {formatDollars(guidance.future_earnings_present_value)} &middot;
-              Effective wealth: {formatDollars(guidance.effective_wealth)}
+            <StackedBar
+              segments={[
+                { label: `Current: ${formatDollars(guidance.current_baseline_spending)}`, value: guidance.current_baseline_spending, color: guidance.spending_status === 'high' ? '#c4785b' : '#6b8e7b' },
+                { label: `Recommended: ${formatDollars(guidance.recommended_annual_spending)}`, value: guidance.recommended_annual_spending - guidance.current_baseline_spending, color: '#d4d4c8' },
+              ].filter(s => s.value > 0)}
+              total={Math.max(guidance.recommended_annual_spending, guidance.current_baseline_spending)}
+            />
+            <p className="text-xs text-calm-muted mt-1.5">
+              Recommended {formatDollars(guidance.recommended_annual_spending)}/yr ({guidance.withdrawal_rate_pct}% of{' '}
+              {guidance.future_earnings_present_value > 0
+                ? `${formatDollars(guidance.effective_wealth)} effective wealth`
+                : `${formatDollars(guidance.total_portfolio_value)} portfolio`})
             </p>
           </div>
-        )}
+
+          {/* Wealth bar */}
+          <div>
+            <p className="text-sm font-medium mb-2">Wealth</p>
+            <StackedBar
+              segments={[
+                { label: `Portfolio: ${formatDollars(guidance.total_portfolio_value)}`, value: guidance.total_portfolio_value, color: '#6b8e7b' },
+                ...(guidance.future_earnings_present_value > 0
+                  ? [{ label: `Future earnings (PV): ${formatDollars(guidance.future_earnings_present_value)}`, value: guidance.future_earnings_present_value, color: '#a3b8a0' }]
+                  : []),
+              ]}
+              total={guidance.effective_wealth || guidance.total_portfolio_value}
+            />
+            {guidance.future_earnings_present_value > 0 && (
+              <p className="text-xs text-calm-muted mt-1.5">
+                Effective wealth: {formatDollars(guidance.effective_wealth)}
+                {guidance.years_earning && ` (${guidance.years_earning} earning years remaining)`}
+              </p>
+            )}
+          </div>
+        </div>
       </Card>
 
       {/* Editable parameters */}
