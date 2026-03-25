@@ -160,6 +160,9 @@ async def import_csv(account_id: int, file: UploadFile, db: Session = Depends(ge
     content = await file.read()
     reader = csv.DictReader(io.StringIO(content.decode("utf-8")))
 
+    # Clear existing holdings for this account
+    db.query(Holding).filter(Holding.account_id == account_id).delete()
+
     imported = 0
     for row in reader:
         ticker = row.get("ticker", "").strip().upper()
@@ -175,26 +178,14 @@ async def import_csv(account_id: int, file: UploadFile, db: Session = Depends(ge
         if market_value == 0 and price > 0:
             market_value = quantity * price
 
-        # Update existing or create new
-        existing = db.query(Holding).filter(
-            Holding.account_id == account_id,
-            Holding.ticker == ticker,
-        ).first()
-
-        if existing:
-            existing.quantity = quantity
-            existing.price = price
-            existing.market_value = market_value
-            existing.as_of_date = date.today()
-        else:
-            db.add(Holding(
-                account_id=account_id,
-                ticker=ticker,
-                quantity=quantity,
-                price=price,
-                market_value=market_value,
-                as_of_date=date.today(),
-            ))
+        db.add(Holding(
+            account_id=account_id,
+            ticker=ticker,
+            quantity=quantity,
+            price=price,
+            market_value=market_value,
+            as_of_date=date.today(),
+        ))
         imported += 1
 
     # Auto-create sleeve stubs for tickers not already in the fund list
