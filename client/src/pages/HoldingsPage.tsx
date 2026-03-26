@@ -294,21 +294,6 @@ export function HoldingsPage() {
         </Card>
       )}
 
-      {/* CSV info */}
-      <Card>
-        <h3 className="text-sm font-medium text-calm-muted uppercase tracking-wide mb-2">CSV Import Format</h3>
-        <p className="text-xs text-calm-muted mb-2">
-          Upload a CSV with columns: <code className="bg-calm-bg px-1 rounded">ticker, quantity, price</code> or{' '}
-          <code className="bg-calm-bg px-1 rounded">ticker, quantity, market_value</code>
-        </p>
-        <pre className="text-xs bg-calm-bg p-3 rounded text-calm-muted">
-{`ticker,quantity,price
-VTI,150,280.50
-VXUS,300,58.20
-VGIT,200,58.00`}
-        </pre>
-      </Card>
-
       {/* Hidden file input for CSV */}
       <input
         ref={fileInputRef}
