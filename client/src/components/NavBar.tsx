@@ -11,7 +11,6 @@ export function NavBar() {
     { path: '/plan', label: 'Plan' },
     { path: '/holdings', label: 'Holdings' },
     ...(!isCategory ? [{ path: '/allocation', label: 'Allocation' }] : []),
-    { path: '/insights', label: 'Insights' },
     { path: '/spending', label: 'Spending' },
     { path: '/review', label: 'Review' },
   ];

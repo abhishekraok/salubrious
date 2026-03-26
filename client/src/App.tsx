@@ -7,7 +7,6 @@ import { SpendingPage } from './pages/SpendingPage'
 import { ReviewPage } from './pages/ReviewPage'
 
 import { HoldingsPage } from './pages/HoldingsPage'
-import { InsightsPage } from './pages/InsightsPage'
 
 function App() {
   return (
@@ -17,7 +16,6 @@ function App() {
         <Route path="/plan" element={<PlanPage />} />
         <Route path="/holdings" element={<HoldingsPage />} />
         <Route path="/allocation" element={<AllocationPage />} />
-        <Route path="/insights" element={<InsightsPage />} />
         <Route path="/spending" element={<SpendingPage />} />
         <Route path="/review" element={<ReviewPage />} />
 
