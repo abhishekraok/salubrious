@@ -5,6 +5,33 @@ import { useApi } from '../hooks/useApi';
 import { post, put, del } from '../api/client';
 import type { Account, Holding } from '../types';
 
+function RefreshPricesButton({ onRefreshed }: { onRefreshed: () => void }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    setResult(null);
+    try {
+      const res = await post<{ status: string; updated?: number }>('/prices/refresh');
+      setResult(`${res.updated ?? 0} prices updated`);
+      onRefreshed();
+    } catch {
+      setResult('Failed to refresh');
+    }
+    setRefreshing(false);
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="secondary" onClick={refresh} disabled={refreshing}>
+        {refreshing ? 'Refreshing...' : 'Refresh Prices'}
+      </Button>
+      {result && <span className="text-xs text-calm-muted">{result}</span>}
+    </div>
+  );
+}
+
 function formatDollars(n: number) {
   return '$' + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
@@ -87,6 +114,7 @@ export function HoldingsPage() {
         <h2 className="text-2xl font-semibold tracking-tight">Holdings</h2>
         <div className="flex items-center gap-3">
           <span className="text-sm text-calm-muted">Total: {formatDollars(totalValue)}</span>
+          <RefreshPricesButton onRefreshed={refetchHoldings} />
           <Button variant="secondary" onClick={() => {
             window.open('/api/holdings/export', '_blank');
           }}>Export CSV</Button>

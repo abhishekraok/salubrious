@@ -5,7 +5,7 @@ import { PlanPage } from './pages/PlanPage'
 import { AllocationPage } from './pages/AllocationPage'
 import { SpendingPage } from './pages/SpendingPage'
 import { ReviewPage } from './pages/ReviewPage'
-import { SettingsPage } from './pages/SettingsPage'
+
 import { HoldingsPage } from './pages/HoldingsPage'
 import { InsightsPage } from './pages/InsightsPage'
 
@@ -20,7 +20,7 @@ function App() {
         <Route path="/insights" element={<InsightsPage />} />
         <Route path="/spending" element={<SpendingPage />} />
         <Route path="/review" element={<ReviewPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+
       </Route>
     </Routes>
   )

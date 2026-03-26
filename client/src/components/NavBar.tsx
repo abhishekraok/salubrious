@@ -14,7 +14,6 @@ export function NavBar() {
     { path: '/insights', label: 'Insights' },
     { path: '/spending', label: 'Spending' },
     { path: '/review', label: 'Review' },
-    { path: '/settings', label: 'Settings' },
   ];
 
   return (
