@@ -115,9 +115,6 @@ export function HoldingsPage() {
         <div className="flex items-center gap-3">
           <span className="text-sm text-calm-muted">Total: {formatDollars(totalValue)}</span>
           <RefreshPricesButton onRefreshed={refetchHoldings} />
-          <Button variant="secondary" onClick={() => {
-            window.open('/api/holdings/export', '_blank');
-          }}>Export CSV</Button>
           <Button variant="secondary" onClick={() => setShowAccountForm(true)}>Add Account</Button>
         </div>
       </div>
@@ -188,6 +185,11 @@ export function HoldingsPage() {
                   fileInputRef.current?.click();
                 }}>
                   Import CSV
+                </Button>
+                <Button variant="secondary" onClick={() => {
+                  window.open(`/api/accounts/${acct.id}/holdings/export`, '_blank');
+                }}>
+                  Export CSV
                 </Button>
                 <Button variant="ghost" className="text-xs text-calm-red" onClick={() => deleteAccount(acct.id)}>
                   Delete

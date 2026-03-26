@@ -148,6 +148,28 @@ def export_holdings_csv(db: Session = Depends(get_db)):
     )
 
 
+@router.get("/accounts/{account_id}/holdings/export")
+def export_account_holdings_csv(account_id: int, db: Session = Depends(get_db)):
+    """Export holdings for a single account as a CSV file."""
+    account = db.query(Account).get(account_id)
+    if not account:
+        raise HTTPException(404, "Account not found")
+    holdings = db.query(Holding).filter(Holding.account_id == account_id).order_by(Holding.ticker).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ticker", "quantity", "price", "market_value", "as_of_date"])
+    for h in holdings:
+        writer.writerow([h.ticker, h.quantity, round(h.price, 2), round(h.market_value, 2), h.as_of_date])
+
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={account.account_name}_holdings.csv"},
+    )
+
+
 # --- CSV Import ---
 
 @router.post("/accounts/{account_id}/holdings/csv")
