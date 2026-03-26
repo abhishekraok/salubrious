@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
+from typing import Optional
 
 from ..models import InvestmentPolicy
 from .allocation import AllocationResult
+from .bands import classify_drift, compute_bands
+from .breakdown import PortfolioBreakdown
 from .rebalance import RebalanceSuggestion
 from .spending import SpendingRunway
 
@@ -27,11 +30,71 @@ class TodayRecommendation:
     active_issues: list[str] = field(default_factory=list)
 
 
+def _check_category_drift(
+    breakdown: PortfolioBreakdown,
+) -> tuple[int, int, list[str], str]:
+    """Check category-level drift for category-mode portfolios.
+
+    Returns (outside_soft, outside_hard, issue_strings, rationale).
+    Reports at most one issue per category group (the most-drifted entry).
+    """
+    outside_soft = 0
+    outside_hard = 0
+    issues: list[str] = []
+    rationale_parts: list[str] = []
+
+    category_groups = [
+        ("Asset Type", breakdown.asset_type),
+        ("Region", breakdown.region),
+        ("Value Factor", breakdown.factor_value),
+        ("Size Factor", breakdown.factor_size),
+    ]
+
+    for group_name, entries in category_groups:
+        if not entries or all(e.target_pct == 0 for e in entries):
+            continue
+
+        worst_status = "ok"
+        worst_entry = None
+        worst_drift = 0.0
+
+        for entry in entries:
+            if entry.target_pct == 0:
+                continue
+            drift = entry.current_pct - entry.target_pct
+            soft, hard = compute_bands(entry.target_pct)
+            status = classify_drift(drift, soft, hard)
+            if status == "action_needed" or (
+                status == "watch" and worst_status not in ("action_needed",)
+            ):
+                if abs(drift) > abs(worst_drift):
+                    worst_status = status
+                    worst_entry = entry
+                    worst_drift = drift
+
+        if worst_entry is not None and worst_status != "ok":
+            direction = "above" if worst_drift > 0 else "below"
+            issues.append(
+                f"{worst_entry.label} ({group_name}) is {abs(worst_drift):.1f}pp {direction} target "
+                f"({worst_entry.current_pct:.1f}% actual vs {worst_entry.target_pct:.1f}% target)."
+            )
+            rationale_parts.append(
+                f"{worst_entry.label} is {abs(worst_drift):.1f}pp {direction} target"
+            )
+            outside_soft += 1
+            if worst_status == "action_needed":
+                outside_hard += 1
+
+    rationale = "; ".join(rationale_parts) + "." if rationale_parts else ""
+    return outside_soft, outside_hard, issues, rationale
+
+
 def compute_today(
     allocation: AllocationResult,
     runway: SpendingRunway,
     policy: InvestmentPolicy,
     rebalance: RebalanceSuggestion,
+    breakdown: Optional[PortfolioBreakdown] = None,
 ) -> TodayRecommendation:
     """Determine the single top recommendation for the Today page.
 
@@ -47,6 +110,22 @@ def compute_today(
     explanation = "All allocation sleeves are within tolerance bands. Everything is within policy."
     status = "calm"
 
+    # Determine whether to use category-level or sleeve-level drift analysis
+    use_category = (
+        getattr(policy, "targeting_mode", "fund") == "category"
+        and breakdown is not None
+    )
+
+    if use_category:
+        eff_outside_soft, eff_outside_hard, drift_issues, drift_rationale = (
+            _check_category_drift(breakdown)  # type: ignore[arg-type]
+        )
+    else:
+        eff_outside_soft = allocation.sleeves_outside_soft
+        eff_outside_hard = allocation.sleeves_outside_hard
+        drift_rationale = rebalance.rationale
+        drift_issues = []
+
     # Check spending runway
     runway_below = runway.baseline_runway_years < policy.safe_asset_runway_years_target
     if runway_below:
@@ -55,23 +134,24 @@ def compute_today(
             f"below target of {policy.safe_asset_runway_years_target:.0f} years."
         )
 
-    # Check hard band breaches
-    if allocation.sleeves_outside_hard > 0:
-        breached = [s for s in allocation.sleeves if s.status == "action_needed"]
-        names = ", ".join(s.ticker for s in breached)
-        issues.append(f"Hard band breached for: {names}.")
+    # Check band breaches
+    if use_category:
+        issues.extend(drift_issues)
+    else:
+        if eff_outside_hard > 0:
+            breached = [s for s in allocation.sleeves if s.status == "action_needed"]
+            names = ", ".join(s.ticker for s in breached)
+            issues.append(f"Hard band breached for: {names}.")
+        elif eff_outside_soft > 0:
+            drifted = [s for s in allocation.sleeves if s.status == "watch"]
+            names = ", ".join(s.ticker for s in drifted)
+            issues.append(f"Soft band drift for: {names}.")
 
     # Check review overdue
     review_overdue = False
     if policy.next_review_date and policy.next_review_date <= date.today():
         review_overdue = True
         issues.append("Scheduled review is overdue.")
-
-    # Check soft band breaches
-    if allocation.sleeves_outside_soft > 0 and allocation.sleeves_outside_hard == 0:
-        drifted = [s for s in allocation.sleeves if s.status == "watch"]
-        names = ", ".join(s.ticker for s in drifted)
-        issues.append(f"Soft band drift for: {names}.")
 
     # Determine headline by priority
     if runway_below:
@@ -81,24 +161,24 @@ def compute_today(
             f"below your target of {policy.safe_asset_runway_years_target:.0f} years."
         )
         status = "action"
-    elif allocation.sleeves_outside_hard > 0:
+    elif eff_outside_hard > 0:
         headline = "Rebalance required"
-        explanation = rebalance.rationale or "One or more sleeves are outside hard tolerance bands."
+        explanation = drift_rationale or "One or more categories are outside hard tolerance bands."
         status = "action"
     elif review_overdue:
         headline = "Annual review due"
         explanation = f"Your scheduled review date ({policy.next_review_date}) has passed."
         status = "watch"
-    elif allocation.sleeves_outside_soft > 0:
+    elif eff_outside_soft > 0:
         headline = "Mild drift detected"
-        explanation = rebalance.rationale or "Some sleeves are outside soft bands. Consider directing new contributions."
+        explanation = drift_rationale or "Some categories are outside soft bands. Consider directing new contributions."
         status = "watch"
 
     # Build summary cards
     # Portfolio status
-    if allocation.sleeves_outside_hard > 0:
+    if eff_outside_hard > 0:
         portfolio_status = ("Action needed", "action")
-    elif allocation.sleeves_outside_soft > 0:
+    elif eff_outside_soft > 0:
         portfolio_status = ("Watch", "watch")
     else:
         portfolio_status = ("On plan", "calm")
