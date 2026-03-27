@@ -118,12 +118,15 @@ def compute_breakdown(
             fv_target[label] = fv_target.get(label, 0) + sleeve.target_percent
         fv_target = _normalize(fv_target)
 
-    # --- Factor: Size (equity only, Small vs Other) ---
+    # --- Factor: Size (as % of value-tilted equities, Small vs Other) ---
+    tilted_sleeves = [s for s in equity_sleeves if (s.factor_value or "").lower() == "tilted"]
+    tilted_total_value = sum(value_by_ticker.get(s.ticker, 0.0) for s in tilted_sleeves)
+
     small_current = 0.0
     other_current = 0.0
-    for sleeve in equity_sleeves:
+    for sleeve in tilted_sleeves:
         cur_val = value_by_ticker.get(sleeve.ticker, 0.0)
-        cur_pct = (cur_val / equity_total_value * 100) if equity_total_value else 0
+        cur_pct = (cur_val / tilted_total_value * 100) if tilted_total_value else 0
         if (sleeve.factor_size or "").lower() == "small":
             small_current += cur_pct
         else:
@@ -136,7 +139,7 @@ def compute_breakdown(
     else:
         small_tgt = 0.0
         other_tgt = 0.0
-        for sleeve in equity_sleeves:
+        for sleeve in tilted_sleeves:
             if (sleeve.factor_size or "").lower() == "small":
                 small_tgt += sleeve.target_percent
             else:

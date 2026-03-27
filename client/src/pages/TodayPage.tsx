@@ -76,12 +76,13 @@ function pick(entries: BreakdownEntry[], label: string) {
   return entries.find((e) => e.label === label) ?? null;
 }
 
-function InsightGauge({ title, entry, color }: { title: string; entry: BreakdownEntry; color: string }) {
+function InsightGauge({ title, entry, color, basis }: { title: string; entry: BreakdownEntry; color: string; basis: string }) {
   const status = driftStatus(entry.current_pct, entry.target_pct);
   return (
     <div className="flex flex-col items-center">
       <GaugeRing label={entry.label} current={entry.current_pct} target={entry.target_pct} max={100} color={color} />
-      <div className="mt-2">
+      <span className="text-[10px] text-calm-muted">{basis}</span>
+      <div className="mt-1">
         <Badge status={status}>{status === 'ok' ? 'OK' : status === 'watch' ? 'Watch' : 'Action'}</Badge>
       </div>
     </div>
@@ -126,16 +127,16 @@ export function TodayPage() {
           <h3 className="text-sm font-medium text-calm-muted uppercase tracking-wide mb-4">Portfolio Insights</h3>
           <div className="grid grid-cols-4 gap-4">
             {pick(breakdown.asset_type, 'Equities') && (
-              <InsightGauge title="Equity %" entry={pick(breakdown.asset_type, 'Equities')!} color={COLORS[0]} />
+              <InsightGauge title="Equity %" entry={pick(breakdown.asset_type, 'Equities')!} color={COLORS[0]} basis="of portfolio" />
             )}
             {pick(breakdown.region, 'International') && (
-              <InsightGauge title="International %" entry={pick(breakdown.region, 'International')!} color={COLORS[1]} />
+              <InsightGauge title="International %" entry={pick(breakdown.region, 'International')!} color={COLORS[1]} basis="of equities" />
             )}
             {pick(breakdown.factor_value, 'Tilted') && (
-              <InsightGauge title="Value-Tilted %" entry={pick(breakdown.factor_value, 'Tilted')!} color={COLORS[2]} />
+              <InsightGauge title="Value-Tilted %" entry={pick(breakdown.factor_value, 'Tilted')!} color={COLORS[2]} basis="of equities" />
             )}
             {pick(breakdown.factor_size, 'Small Cap') && (
-              <InsightGauge title="Small Cap %" entry={pick(breakdown.factor_size, 'Small Cap')!} color={COLORS[3]} />
+              <InsightGauge title="Small Cap %" entry={pick(breakdown.factor_size, 'Small Cap')!} color={COLORS[3]} basis="of value-tilted" />
             )}
           </div>
         </Card>
