@@ -133,10 +133,10 @@ export function TodayPage() {
               <InsightGauge title="International %" entry={pick(breakdown.region, 'International')!} color={COLORS[1]} basis="of equities" />
             )}
             {pick(breakdown.factor_value, 'Tilted') && (
-              <InsightGauge title="Value-Tilted %" entry={pick(breakdown.factor_value, 'Tilted')!} color={COLORS[2]} basis="of equities" />
+              <InsightGauge title="Value tilt %" entry={pick(breakdown.factor_value, 'Tilted')!} color={COLORS[2]} basis="of equities" />
             )}
             {pick(breakdown.factor_size, 'Small Cap') && (
-              <InsightGauge title="Small Cap %" entry={pick(breakdown.factor_size, 'Small Cap')!} color={COLORS[3]} basis="of value-tilted" />
+              <InsightGauge title="Small Cap %" entry={pick(breakdown.factor_size, 'Small Cap')!} color={COLORS[3]} basis="of value tilt" />
             )}
           </div>
         </Card>

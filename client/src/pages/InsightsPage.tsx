@@ -159,7 +159,7 @@ export function InsightsPage() {
           <SingleGauge title="International %" entry={pick(data.region, 'International')!} color={COLORS[1]} />
         )}
         {pick(data.factor_value, 'Tilted') && (
-          <SingleGauge title="Value-Tilted %" entry={pick(data.factor_value, 'Tilted')!} color={COLORS[2]} />
+          <SingleGauge title="Value tilt %" entry={pick(data.factor_value, 'Tilted')!} color={COLORS[2]} />
         )}
         {pick(data.factor_size, 'Small Cap') && (
           <SingleGauge title="Small Cap %" entry={pick(data.factor_size, 'Small Cap')!} color={COLORS[3]} />
