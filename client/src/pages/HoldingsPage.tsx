@@ -5,6 +5,33 @@ import { useApi } from '../hooks/useApi';
 import { post, put, del } from '../api/client';
 import type { Account, Holding } from '../types';
 
+function RefreshPricesButton({ onRefreshed }: { onRefreshed: () => void }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    setResult(null);
+    try {
+      const res = await post<{ status: string; updated?: number }>('/prices/refresh');
+      setResult(`${res.updated ?? 0} prices updated`);
+      onRefreshed();
+    } catch {
+      setResult('Failed to refresh');
+    }
+    setRefreshing(false);
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="secondary" onClick={refresh} disabled={refreshing}>
+        {refreshing ? 'Refreshing...' : 'Refresh Prices'}
+      </Button>
+      {result && <span className="text-xs text-calm-muted">{result}</span>}
+    </div>
+  );
+}
+
 function formatDollars(n: number) {
   return '$' + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
@@ -87,9 +114,7 @@ export function HoldingsPage() {
         <h2 className="text-2xl font-semibold tracking-tight">Holdings</h2>
         <div className="flex items-center gap-3">
           <span className="text-sm text-calm-muted">Total: {formatDollars(totalValue)}</span>
-          <Button variant="secondary" onClick={() => {
-            window.open('/api/holdings/export', '_blank');
-          }}>Export CSV</Button>
+          <RefreshPricesButton onRefreshed={refetchHoldings} />
           <Button variant="secondary" onClick={() => setShowAccountForm(true)}>Add Account</Button>
         </div>
       </div>
@@ -160,6 +185,11 @@ export function HoldingsPage() {
                   fileInputRef.current?.click();
                 }}>
                   Import CSV
+                </Button>
+                <Button variant="secondary" onClick={() => {
+                  window.open(`/api/accounts/${acct.id}/holdings/export`, '_blank');
+                }}>
+                  Export CSV
                 </Button>
                 <Button variant="ghost" className="text-xs text-calm-red" onClick={() => deleteAccount(acct.id)}>
                   Delete
@@ -265,21 +295,6 @@ export function HoldingsPage() {
           <p className="text-sm text-calm-muted">No accounts yet. Add an account to start entering holdings.</p>
         </Card>
       )}
-
-      {/* CSV info */}
-      <Card>
-        <h3 className="text-sm font-medium text-calm-muted uppercase tracking-wide mb-2">CSV Import Format</h3>
-        <p className="text-xs text-calm-muted mb-2">
-          Upload a CSV with columns: <code className="bg-calm-bg px-1 rounded">ticker, quantity, price</code> or{' '}
-          <code className="bg-calm-bg px-1 rounded">ticker, quantity, market_value</code>
-        </p>
-        <pre className="text-xs bg-calm-bg p-3 rounded text-calm-muted">
-{`ticker,quantity,price
-VTI,150,280.50
-VXUS,300,58.20
-VGIT,200,58.00`}
-        </pre>
-      </Card>
 
       {/* Hidden file input for CSV */}
       <input

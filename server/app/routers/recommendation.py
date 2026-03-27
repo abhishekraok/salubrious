@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_user
 from ..database import get_db
 from ..engines.allocation import compute_allocation
+from ..engines.breakdown import compute_breakdown
 from ..engines.rebalance import suggest_rebalance
 from ..engines.recommendation import compute_today
 from ..engines.spending import compute_spending_runway
@@ -27,6 +28,11 @@ def get_today(db: Session = Depends(get_db), user: UserProfile = Depends(get_cur
     allocation = compute_allocation(holdings, sleeves)
     rebalance = suggest_rebalance(allocation, avoid_taxable_sales=policy.avoid_taxable_sales)
     runway = compute_spending_runway(holdings, sleeves, policy)
-    today = compute_today(allocation, runway, policy, rebalance)
+
+    breakdown = None
+    if getattr(policy, "targeting_mode", "fund") == "category":
+        breakdown = compute_breakdown(holdings, sleeves, policy)
+
+    today = compute_today(allocation, runway, policy, rebalance, breakdown=breakdown)
 
     return asdict(today)

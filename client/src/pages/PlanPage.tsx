@@ -312,7 +312,7 @@ export function PlanPage() {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-calm-muted">Equity:</span>
-                <span className="ml-2 font-medium">{policy.target_equity_pct != null ? `${policy.target_equity_pct}%` : '—'}</span>
+                <span className="ml-2 font-medium">{policy.target_equity_pct != null ? `${policy.target_equity_pct}% of portfolio` : '—'}</span>
               </div>
               <div>
                 <span className="text-calm-muted">International:</span>
@@ -324,7 +324,7 @@ export function PlanPage() {
               </div>
               <div>
                 <span className="text-calm-muted">Small cap:</span>
-                <span className="ml-2 font-medium">{policy.target_small_cap_pct != null ? `${policy.target_small_cap_pct}% of equities` : '—'}</span>
+                <span className="ml-2 font-medium">{policy.target_small_cap_pct != null ? `${policy.target_small_cap_pct}% of value-tilted` : '—'}</span>
               </div>
             </div>
           )}

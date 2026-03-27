@@ -45,6 +45,10 @@ export interface InvestmentPolicy {
   target_international_pct: number | null;
   target_value_tilted_pct: number | null;
   target_small_cap_pct: number | null;
+  expected_years_remaining: number | null;
+  expected_years_earning: number | null;
+  expected_after_tax_salary: number | null;
+  withdrawal_rate_pct: number;
   things_i_do_not_do: string | null;
   next_review_date: string | null;
   last_review_date: string | null;
@@ -149,6 +153,34 @@ export interface TodayRecommendation {
   status: 'calm' | 'watch' | 'action';
   summary_cards: { label: string; value: string; status: string }[];
   active_issues: string[];
+}
+
+export interface SpendingGuidance {
+  total_portfolio_value: number;
+  withdrawal_rate_pct: number;
+  recommended_annual_spending: number;
+  current_baseline_spending: number;
+  spending_status: 'low' | 'appropriate' | 'high';
+  future_earnings_present_value: number;
+  effective_wealth: number;
+  effective_recommended_spending: number;
+  years_remaining: number | null;
+  years_earning: number | null;
+  after_tax_salary: number | null;
+}
+
+export interface SimulationResult {
+  years: number[];
+  p5: number[];
+  p25: number[];
+  p50: number[];
+  p75: number[];
+  p95: number[];
+  ruin_probability: number;
+  ruin_by_year: number[];
+  spending_floor: number;
+  spending_recommended: number;
+  spending_ceiling: number;
 }
 
 export interface SpendingRunway {

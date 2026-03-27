@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..models import Account, Holding, UserProfile
+from ..fund_metadata import lookup_fund
+from ..models import Account, Holding, InvestmentPolicy, PortfolioSleeve, UserProfile
 from ..schemas import (
     AccountCreate,
     AccountOut,
@@ -154,6 +155,28 @@ def export_holdings_csv(db: Session = Depends(get_db), user: UserProfile = Depen
     )
 
 
+@router.get("/accounts/{account_id}/holdings/export")
+def export_account_holdings_csv(account_id: int, db: Session = Depends(get_db)):
+    """Export holdings for a single account as a CSV file."""
+    account = db.query(Account).get(account_id)
+    if not account:
+        raise HTTPException(404, "Account not found")
+    holdings = db.query(Holding).filter(Holding.account_id == account_id).order_by(Holding.ticker).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ticker", "quantity", "price", "market_value", "as_of_date"])
+    for h in holdings:
+        writer.writerow([h.ticker, h.quantity, round(h.price, 2), round(h.market_value, 2), h.as_of_date])
+
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={account.account_name}_holdings.csv"},
+    )
+
+
 # --- CSV Import ---
 
 @router.post("/accounts/{account_id}/holdings/csv")
@@ -165,6 +188,9 @@ async def import_csv(account_id: int, file: UploadFile, db: Session = Depends(ge
 
     content = await file.read()
     reader = csv.DictReader(io.StringIO(content.decode("utf-8")))
+
+    # Clear existing holdings for this account
+    db.query(Holding).filter(Holding.account_id == account_id).delete()
 
     imported = 0
     for row in reader:
@@ -181,27 +207,50 @@ async def import_csv(account_id: int, file: UploadFile, db: Session = Depends(ge
         if market_value == 0 and price > 0:
             market_value = quantity * price
 
-        # Update existing or create new
-        existing = db.query(Holding).filter(
-            Holding.account_id == account_id,
-            Holding.ticker == ticker,
-        ).first()
-
-        if existing:
-            existing.quantity = quantity
-            existing.price = price
-            existing.market_value = market_value
-            existing.as_of_date = date.today()
-        else:
-            db.add(Holding(
-                account_id=account_id,
-                ticker=ticker,
-                quantity=quantity,
-                price=price,
-                market_value=market_value,
-                as_of_date=date.today(),
-            ))
+        db.add(Holding(
+            account_id=account_id,
+            ticker=ticker,
+            quantity=quantity,
+            price=price,
+            market_value=market_value,
+            as_of_date=date.today(),
+        ))
         imported += 1
+
+    # Auto-create sleeve stubs for tickers not already in the fund list
+    policy = db.query(InvestmentPolicy).filter(
+        InvestmentPolicy.user_id == account.user_id
+    ).first()
+    if policy:
+        existing_tickers = {
+            s.ticker for s in
+            db.query(PortfolioSleeve).filter(PortfolioSleeve.policy_id == policy.id).all()
+        }
+        new_holdings = db.query(Holding).filter(
+            Holding.account_id == account_id,
+            ~Holding.ticker.in_(existing_tickers) if existing_tickers else True,
+        ).all()
+        for h in new_holdings:
+            if h.ticker not in existing_tickers:
+                meta = lookup_fund(h.ticker)
+                if meta:
+                    db.add(PortfolioSleeve(
+                        policy_id=policy.id,
+                        ticker=h.ticker,
+                        target_percent=0,
+                        **meta,
+                    ))
+                else:
+                    db.add(PortfolioSleeve(
+                        policy_id=policy.id,
+                        ticker=h.ticker,
+                        label=h.ticker,
+                        target_percent=0,
+                        asset_class="equity",
+                        is_safe_asset=False,
+                        is_cash_like=False,
+                    ))
+                existing_tickers.add(h.ticker)
 
     db.commit()
     return {"imported": imported}
