@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from ..auth import get_current_user
 from ..database import get_db
 from ..models import Account, Holding, UserProfile
 
@@ -29,11 +30,10 @@ def price_status():
 
 
 @router.post("/refresh")
-def refresh_prices(db: Session = Depends(get_db)):
+def refresh_prices(db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
     """Fetch latest prices via yfinance and update all holdings."""
     global _last_refresh
 
-    user = db.query(UserProfile).first()
     accounts = db.query(Account).filter(Account.user_id == user.id).all()
     account_ids = [a.id for a in accounts]
     holdings = db.query(Holding).filter(Holding.account_id.in_(account_ids)).all()
