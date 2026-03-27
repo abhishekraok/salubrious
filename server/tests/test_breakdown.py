@@ -169,41 +169,60 @@ class TestComputeBreakdownFactorValue:
 
 
 class TestComputeBreakdownFactorSize:
-    def test_all_other_size(self):
-        sleeves = [make_sleeve("VTI", "US", 100.0, factor_size="large")]
-        holdings = [make_holding("VTI", 100_000.0)]
+    """Size breakdown is now relative to value-tilted equities only."""
+
+    def test_all_other_size_within_tilted(self):
+        # A tilted large-cap sleeve: 100% "Other" within tilted
+        sleeves = [make_sleeve("AVLV", "US LCV", 100.0, factor_value="tilted", factor_size="large")]
+        holdings = [make_holding("AVLV", 100_000.0)]
         result = compute_breakdown(holdings, sleeves)
         other = _find(result.factor_size, "Other")
         small = _find(result.factor_size, "Small Cap")
         assert other.current_pct == pytest.approx(100.0)
         assert small.current_pct == pytest.approx(0.0)
 
-    def test_small_cap_sleeve_identified(self):
+    def test_non_tilted_excluded_from_size(self):
+        # Blend sleeves are excluded; size breakdown is empty (0/0)
+        sleeves = [make_sleeve("VTI", "US", 100.0, factor_value="blend", factor_size="large")]
+        holdings = [make_holding("VTI", 100_000.0)]
+        result = compute_breakdown(holdings, sleeves)
+        other = _find(result.factor_size, "Other")
+        small = _find(result.factor_size, "Small Cap")
+        assert other.current_pct == pytest.approx(0.0)
+        assert small.current_pct == pytest.approx(0.0)
+
+    def test_small_cap_as_pct_of_tilted(self):
         sleeves = [
-            make_sleeve("VBR", "Small Value", 30.0, factor_size="small"),
-            make_sleeve("VTI", "Total", 70.0, factor_size="large"),
+            make_sleeve("AVUV", "Small Value", 30.0, factor_value="tilted", factor_size="small"),
+            make_sleeve("AVLV", "Large Value", 20.0, factor_value="tilted", factor_size="large"),
+            make_sleeve("VTI", "Total", 50.0, factor_value="blend", factor_size="large"),
         ]
-        holdings = [make_holding("VBR", 30_000.0), make_holding("VTI", 70_000.0)]
+        holdings = [
+            make_holding("AVUV", 30_000.0),
+            make_holding("AVLV", 20_000.0),
+            make_holding("VTI", 50_000.0),
+        ]
         result = compute_breakdown(holdings, sleeves)
         small = _find(result.factor_size, "Small Cap")
         other = _find(result.factor_size, "Other")
-        assert small.current_pct == pytest.approx(30.0)
-        assert other.current_pct == pytest.approx(70.0)
+        # 30K small / 50K tilted total = 60%, 20K large / 50K = 40%
+        assert small.current_pct == pytest.approx(60.0)
+        assert other.current_pct == pytest.approx(40.0)
 
     def test_category_mode_small_cap_target(self):
         sleeves = [
-            make_sleeve("VBR", "Small", 30.0, factor_size="small"),
-            make_sleeve("VTI", "Large", 70.0, factor_size="large"),
+            make_sleeve("AVUV", "Small", 30.0, factor_value="tilted", factor_size="small"),
+            make_sleeve("AVLV", "Large", 70.0, factor_value="tilted", factor_size="large"),
         ]
-        holdings = [make_holding("VBR", 30_000.0), make_holding("VTI", 70_000.0)]
+        holdings = [make_holding("AVUV", 30_000.0), make_holding("AVLV", 70_000.0)]
         policy = make_policy(targeting_mode="category", target_small_cap_pct=25.0)
         result = compute_breakdown(holdings, sleeves, policy=policy)
         small = _find(result.factor_size, "Small Cap")
         assert small.target_pct == pytest.approx(25.0)
 
-    def test_none_factor_size_treated_as_other(self):
-        sleeves = [make_sleeve("VTI", "US", 100.0, factor_size=None)]
-        holdings = [make_holding("VTI", 100_000.0)]
+    def test_none_factor_size_tilted_treated_as_other(self):
+        sleeves = [make_sleeve("VTV", "US Value", 100.0, factor_value="tilted", factor_size=None)]
+        holdings = [make_holding("VTV", 100_000.0)]
         result = compute_breakdown(holdings, sleeves)
         other = _find(result.factor_size, "Other")
         assert other is not None
