@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ..auth import get_current_user
 from ..database import get_db
 from ..engines.monte_carlo import SimulationParams, run_simulation
 from ..engines.spending import compute_spending_guidance, compute_spending_runway, run_scenario
@@ -20,8 +21,7 @@ class ScenarioRequest(BaseModel):
     runway_target_change: float = 0.0
 
 
-def _get_runway(db: Session):
-    user = db.query(UserProfile).first()
+def _get_runway(db: Session, user: UserProfile):
     policy = db.query(InvestmentPolicy).filter(InvestmentPolicy.user_id == user.id).first()
     sleeves = db.query(PortfolioSleeve).filter(PortfolioSleeve.policy_id == policy.id).all()
     accounts = db.query(Account).filter(Account.user_id == user.id).all()
@@ -31,8 +31,8 @@ def _get_runway(db: Session):
 
 
 @router.get("/runway")
-def get_runway(db: Session = Depends(get_db)):
-    runway, _ = _get_runway(db)
+def get_runway(db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
+    runway, _ = _get_runway(db, user)
     return asdict(runway)
 
 
@@ -78,8 +78,8 @@ def get_simulation(db: Session = Depends(get_db)):
 
 
 @router.post("/scenario")
-def post_scenario(req: ScenarioRequest, db: Session = Depends(get_db)):
-    runway, policy = _get_runway(db)
+def post_scenario(req: ScenarioRequest, db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
+    runway, policy = _get_runway(db, user)
     result = run_scenario(
         runway,
         baseline_spending=policy.baseline_annual_spending,

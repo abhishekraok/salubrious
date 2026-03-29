@@ -24,8 +24,14 @@ def seed():
         db.close()
         return
 
-    # User
-    user = UserProfile(name="Default User", currency="USD")
+    # User (with dev-mode credentials for local login)
+    from passlib.hash import bcrypt
+    user = UserProfile(
+        name="Default User",
+        email="demo@example.com",
+        password_hash=bcrypt.hash("demo1234"),
+        currency="USD",
+    )
     db.add(user)
     db.flush()
 

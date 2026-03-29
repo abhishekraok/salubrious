@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from ..auth import get_current_user
 from ..database import get_db
 from ..fund_metadata import lookup_fund
 from ..models import Account, Holding, InvestmentPolicy, PortfolioSleeve, UserProfile
@@ -26,14 +27,12 @@ router = APIRouter(prefix="/api", tags=["portfolio"])
 # --- Accounts ---
 
 @router.get("/accounts", response_model=list[AccountOut])
-def list_accounts(db: Session = Depends(get_db)):
-    user = db.query(UserProfile).first()
+def list_accounts(db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
     return db.query(Account).filter(Account.user_id == user.id).all()
 
 
 @router.post("/accounts", response_model=AccountOut)
-def create_account(data: AccountCreate, db: Session = Depends(get_db)):
-    user = db.query(UserProfile).first()
+def create_account(data: AccountCreate, db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
     account = Account(user_id=user.id, **data.model_dump())
     db.add(account)
     db.commit()
@@ -42,8 +41,8 @@ def create_account(data: AccountCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/accounts/{account_id}", response_model=AccountOut)
-def update_account(account_id: int, data: AccountUpdate, db: Session = Depends(get_db)):
-    account = db.query(Account).get(account_id)
+def update_account(account_id: int, data: AccountUpdate, db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
+    account = db.query(Account).filter(Account.id == account_id, Account.user_id == user.id).first()
     if not account:
         raise HTTPException(404, "Account not found")
     for k, v in data.model_dump(exclude_unset=True).items():
@@ -54,8 +53,8 @@ def update_account(account_id: int, data: AccountUpdate, db: Session = Depends(g
 
 
 @router.delete("/accounts/{account_id}")
-def delete_account(account_id: int, db: Session = Depends(get_db)):
-    account = db.query(Account).get(account_id)
+def delete_account(account_id: int, db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
+    account = db.query(Account).filter(Account.id == account_id, Account.user_id == user.id).first()
     if not account:
         raise HTTPException(404, "Account not found")
     db.query(Holding).filter(Holding.account_id == account_id).delete()
@@ -67,21 +66,23 @@ def delete_account(account_id: int, db: Session = Depends(get_db)):
 # --- Holdings ---
 
 @router.get("/accounts/{account_id}/holdings", response_model=list[HoldingOut])
-def list_holdings(account_id: int, db: Session = Depends(get_db)):
+def list_holdings(account_id: int, db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
+    account = db.query(Account).filter(Account.id == account_id, Account.user_id == user.id).first()
+    if not account:
+        raise HTTPException(404, "Account not found")
     return db.query(Holding).filter(Holding.account_id == account_id).order_by(Holding.ticker).all()
 
 
 @router.get("/holdings", response_model=list[HoldingOut])
-def list_all_holdings(db: Session = Depends(get_db)):
-    user = db.query(UserProfile).first()
+def list_all_holdings(db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
     accounts = db.query(Account).filter(Account.user_id == user.id).all()
     account_ids = [a.id for a in accounts]
     return db.query(Holding).filter(Holding.account_id.in_(account_ids)).order_by(Holding.ticker).all()
 
 
 @router.post("/accounts/{account_id}/holdings", response_model=HoldingOut)
-def create_holding(account_id: int, data: HoldingCreate, db: Session = Depends(get_db)):
-    account = db.query(Account).get(account_id)
+def create_holding(account_id: int, data: HoldingCreate, db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
+    account = db.query(Account).filter(Account.id == account_id, Account.user_id == user.id).first()
     if not account:
         raise HTTPException(404, "Account not found")
     holding = Holding(
@@ -99,9 +100,13 @@ def create_holding(account_id: int, data: HoldingCreate, db: Session = Depends(g
 
 
 @router.put("/holdings/{holding_id}", response_model=HoldingOut)
-def update_holding(holding_id: int, data: HoldingUpdate, db: Session = Depends(get_db)):
-    holding = db.query(Holding).get(holding_id)
+def update_holding(holding_id: int, data: HoldingUpdate, db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
+    # Verify holding belongs to user
+    holding = db.query(Holding).filter(Holding.id == holding_id).first()
     if not holding:
+        raise HTTPException(404, "Holding not found")
+    account = db.query(Account).filter(Account.id == holding.account_id, Account.user_id == user.id).first()
+    if not account:
         raise HTTPException(404, "Holding not found")
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(holding, k, v)
@@ -113,9 +118,12 @@ def update_holding(holding_id: int, data: HoldingUpdate, db: Session = Depends(g
 
 
 @router.delete("/holdings/{holding_id}")
-def delete_holding(holding_id: int, db: Session = Depends(get_db)):
-    holding = db.query(Holding).get(holding_id)
+def delete_holding(holding_id: int, db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
+    holding = db.query(Holding).filter(Holding.id == holding_id).first()
     if not holding:
+        raise HTTPException(404, "Holding not found")
+    account = db.query(Account).filter(Account.id == holding.account_id, Account.user_id == user.id).first()
+    if not account:
         raise HTTPException(404, "Holding not found")
     db.delete(holding)
     db.commit()
@@ -125,9 +133,8 @@ def delete_holding(holding_id: int, db: Session = Depends(get_db)):
 # --- CSV Export ---
 
 @router.get("/holdings/export")
-def export_holdings_csv(db: Session = Depends(get_db)):
+def export_holdings_csv(db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
     """Export all holdings as a CSV file."""
-    user = db.query(UserProfile).first()
     accounts = db.query(Account).filter(Account.user_id == user.id).all()
     account_map = {a.id: a for a in accounts}
     account_ids = [a.id for a in accounts]
@@ -173,9 +180,9 @@ def export_account_holdings_csv(account_id: int, db: Session = Depends(get_db)):
 # --- CSV Import ---
 
 @router.post("/accounts/{account_id}/holdings/csv")
-async def import_csv(account_id: int, file: UploadFile, db: Session = Depends(get_db)):
+async def import_csv(account_id: int, file: UploadFile, db: Session = Depends(get_db), user: UserProfile = Depends(get_current_user)):
     """Import holdings from CSV. Expected columns: ticker, quantity, price (or market_value)."""
-    account = db.query(Account).get(account_id)
+    account = db.query(Account).filter(Account.id == account_id, Account.user_id == user.id).first()
     if not account:
         raise HTTPException(404, "Account not found")
 

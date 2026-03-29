@@ -4,10 +4,38 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+# --- Auth ---
+class AuthConfigOut(BaseModel):
+    oauth_enabled: bool
+    google_client_id: Optional[str] = None
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str
+
+
+class AuthResponse(BaseModel):
+    token: str
+    user: "UserProfileOut"
+
+
 # --- User ---
 class UserProfileOut(BaseModel):
     id: int
     name: str
+    email: Optional[str] = None
+    avatar_url: Optional[str] = None
     currency: str
 
     model_config = {"from_attributes": True}

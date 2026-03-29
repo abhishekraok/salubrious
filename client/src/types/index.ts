@@ -1,7 +1,19 @@
 export interface UserProfile {
   id: number;
   name: string;
+  email: string | null;
+  avatar_url: string | null;
   currency: string;
+}
+
+export interface AuthConfig {
+  oauth_enabled: boolean;
+  google_client_id: string | null;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: UserProfile;
 }
 
 export interface UserSettings {
