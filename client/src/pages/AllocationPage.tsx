@@ -215,8 +215,8 @@ export function AllocationPage() {
         </Card>
       )}
 
-      {/* Suggested action (fund mode only for now) */}
-      {!isCategory && activeSuggestion && (
+      {/* Suggested action */}
+      {activeSuggestion && (
         <Card>
           <h3 className="text-sm font-medium text-calm-muted uppercase tracking-wide mb-3">Suggested Action</h3>
           <p className="text-base font-medium mb-2">{activeSuggestion.headline}</p>
