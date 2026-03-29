@@ -4,7 +4,6 @@ import { TodayPage } from './pages/TodayPage'
 import { PlanPage } from './pages/PlanPage'
 import { AllocationPage } from './pages/AllocationPage'
 import { SpendingPage } from './pages/SpendingPage'
-import { ReviewPage } from './pages/ReviewPage'
 
 import { HoldingsPage } from './pages/HoldingsPage'
 
@@ -17,7 +16,6 @@ function App() {
         <Route path="/holdings" element={<HoldingsPage />} />
         <Route path="/allocation" element={<AllocationPage />} />
         <Route path="/spending" element={<SpendingPage />} />
-        <Route path="/review" element={<ReviewPage />} />
 
       </Route>
     </Routes>

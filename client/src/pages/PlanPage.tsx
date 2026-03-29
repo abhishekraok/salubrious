@@ -106,10 +106,6 @@ export function PlanPage() {
     refetchSleeves();
   };
 
-  const thingsIDoNotDo: string[] = policy.things_i_do_not_do
-    ? JSON.parse(policy.things_i_do_not_do)
-    : [];
-
   const sleeveFormUI = (
     <div className="mt-4 p-4 bg-calm-bg rounded-lg space-y-3">
       <p className="text-xs text-calm-muted font-medium uppercase">
@@ -433,10 +429,6 @@ export function PlanPage() {
         <h3 className="text-sm font-medium text-calm-muted uppercase tracking-wide mb-3">Rebalancing Policy</h3>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-calm-muted">Review cadence:</span>
-            <span className="ml-2 font-medium capitalize">{policy.review_cadence}</span>
-          </div>
-          <div>
             <span className="text-calm-muted">Rebalance method:</span>
             <span className="ml-2 font-medium capitalize">{policy.rebalance_method}</span>
           </div>
@@ -461,20 +453,6 @@ export function PlanPage() {
         </p>
       </Card>
 
-      {/* Things I Do Not Do */}
-      {thingsIDoNotDo.length > 0 && (
-        <Card>
-          <h3 className="text-sm font-medium text-calm-muted uppercase tracking-wide mb-3">Things I Do Not Do</h3>
-          <ul className="space-y-2">
-            {thingsIDoNotDo.map((item, i) => (
-              <li key={i} className="text-sm text-calm-text flex items-start gap-2">
-                <span className="text-calm-muted mt-0.5">&#x2014;</span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
     </div>
   );
 }

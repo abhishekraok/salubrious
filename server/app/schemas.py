@@ -45,11 +45,9 @@ class InvestmentPolicyOut(BaseModel):
     id: int
     name: str
     objective_text: str
-    review_cadence: str
     rebalance_method: str
     use_cash_flows_first: bool
     avoid_taxable_sales: bool
-    hard_rebalance_only_at_review: bool
     baseline_annual_spending: float
     comfortable_annual_spending: float
     emergency_annual_spending: float
@@ -64,21 +62,15 @@ class InvestmentPolicyOut(BaseModel):
     target_international_pct: Optional[float]
     target_value_tilted_pct: Optional[float]
     target_small_cap_pct: Optional[float]
-    things_i_do_not_do: Optional[str]
-    next_review_date: Optional[date]
-    last_review_date: Optional[date]
-
     model_config = {"from_attributes": True}
 
 
 class InvestmentPolicyUpdate(BaseModel):
     name: Optional[str] = None
     objective_text: Optional[str] = None
-    review_cadence: Optional[str] = None
     rebalance_method: Optional[str] = None
     use_cash_flows_first: Optional[bool] = None
     avoid_taxable_sales: Optional[bool] = None
-    hard_rebalance_only_at_review: Optional[bool] = None
     baseline_annual_spending: Optional[float] = None
     comfortable_annual_spending: Optional[float] = None
     emergency_annual_spending: Optional[float] = None
@@ -93,10 +85,6 @@ class InvestmentPolicyUpdate(BaseModel):
     target_international_pct: Optional[float] = None
     target_value_tilted_pct: Optional[float] = None
     target_small_cap_pct: Optional[float] = None
-    things_i_do_not_do: Optional[str] = None
-    next_review_date: Optional[date] = None
-    last_review_date: Optional[date] = None
-
 
 # --- Sleeve ---
 class PortfolioSleeveOut(BaseModel):
@@ -225,50 +213,6 @@ class ContributionCreate(BaseModel):
     amount: float
     contribution_date: Optional[date] = None
     note: Optional[str] = None
-
-
-# --- Review ---
-class ReviewEntryOut(BaseModel):
-    id: int
-    policy_id: int
-    review_date: date
-    summary: str
-    life_change_flag: bool
-    allocation_changed_flag: bool
-    notes: Optional[str]
-
-    model_config = {"from_attributes": True}
-
-
-class ReviewEntryCreate(BaseModel):
-    review_date: Optional[date] = None
-    summary: str
-    life_change_flag: bool = False
-    allocation_changed_flag: bool = False
-    notes: Optional[str] = None
-
-
-# --- Journal ---
-class JournalEntryOut(BaseModel):
-    id: int
-    user_id: int
-    entry_date: date
-    action_type: str
-    reason_category: str
-    explanation: str
-    confidence_score: Optional[int]
-    follow_up_date: Optional[date]
-
-    model_config = {"from_attributes": True}
-
-
-class JournalEntryCreate(BaseModel):
-    entry_date: Optional[date] = None
-    action_type: str
-    reason_category: str
-    explanation: str
-    confidence_score: Optional[int] = None
-    follow_up_date: Optional[date] = None
 
 
 # --- Crash Plan ---

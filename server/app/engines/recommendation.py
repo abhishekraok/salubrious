@@ -147,12 +147,6 @@ def compute_today(
             names = ", ".join(s.ticker for s in drifted)
             issues.append(f"Soft band drift for: {names}.")
 
-    # Check review overdue
-    review_overdue = False
-    if policy.next_review_date and policy.next_review_date <= date.today():
-        review_overdue = True
-        issues.append("Scheduled review is overdue.")
-
     # Determine headline by priority
     if runway_below:
         headline = "Spending runway below target"
@@ -165,10 +159,6 @@ def compute_today(
         headline = "Rebalance required"
         explanation = drift_rationale or "One or more categories are outside hard tolerance bands."
         status = "action"
-    elif review_overdue:
-        headline = "Annual review due"
-        explanation = f"Your scheduled review date ({policy.next_review_date}) has passed."
-        status = "watch"
     elif eff_outside_soft > 0:
         headline = "Mild drift detected"
         explanation = drift_rationale or "Some categories are outside soft bands. Consider directing new contributions."
@@ -191,19 +181,10 @@ def compute_today(
     else:
         runway_status = "calm"
 
-    # Review
-    if review_overdue:
-        review_card_status = "action"
-    else:
-        review_card_status = "calm"
-
-    next_review_str = str(policy.next_review_date) if policy.next_review_date else "Not set"
-
     cards = [
         SummaryCard("Portfolio Status", portfolio_status[0], portfolio_status[1]),
         SummaryCard("Spending Runway", f"{runway.baseline_runway_years:.1f} years", runway_status),
         SummaryCard("Safe Assets", f"${runway.safe_asset_total:,.0f}", runway_status),
-        SummaryCard("Next Review", next_review_str, review_card_status),
     ]
 
     return TodayRecommendation(

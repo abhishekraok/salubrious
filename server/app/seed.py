@@ -1,6 +1,6 @@
 """Seed the database with example data (Bernstein 3-fund portfolio)."""
 
-from datetime import date, timedelta
+from datetime import date
 
 from .database import SessionLocal, engine
 from .models import (
@@ -41,11 +41,9 @@ def seed():
             "Grow wealth steadily over the long term while keeping "
             "costs low and decisions simple."
         ),
-        review_cadence="annual",
         rebalance_method="hybrid",
         use_cash_flows_first=True,
         avoid_taxable_sales=True,
-        hard_rebalance_only_at_review=True,
         baseline_annual_spending=40_000,
         comfortable_annual_spending=50_000,
         emergency_annual_spending=30_000,
@@ -60,13 +58,6 @@ def seed():
         target_international_pct=50,
         target_value_tilted_pct=0,
         target_small_cap_pct=0,
-        things_i_do_not_do=(
-            '["I do not react to headlines.",'
-            '"I do not sell equities because of fear.",'
-            '"I do not change asset allocation without a life change or scheduled review."]'
-        ),
-        next_review_date=date.today() + timedelta(days=180),
-        last_review_date=date.today() - timedelta(days=185),
     )
     db.add(policy)
     db.flush()

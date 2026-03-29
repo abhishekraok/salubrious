@@ -18,7 +18,6 @@ export interface InvestmentPolicy {
   id: number;
   name: string;
   objective_text: string;
-  review_cadence: string;
   rebalance_method: string;
   use_cash_flows_first: boolean;
   avoid_taxable_sales: boolean;
@@ -37,9 +36,6 @@ export interface InvestmentPolicy {
   expected_years_earning: number | null;
   expected_after_tax_salary: number | null;
   withdrawal_rate_pct: number;
-  things_i_do_not_do: string | null;
-  next_review_date: string | null;
-  last_review_date: string | null;
 }
 
 export interface PortfolioSleeve {
@@ -80,26 +76,6 @@ export interface Holding {
   as_of_date: string;
 }
 
-export interface ReviewEntry {
-  id: number;
-  policy_id: number;
-  review_date: string;
-  summary: string;
-  life_change_flag: boolean;
-  allocation_changed_flag: boolean;
-  notes: string | null;
-}
-
-export interface JournalEntry {
-  id: number;
-  user_id: number;
-  entry_date: string;
-  action_type: string;
-  reason_category: string;
-  explanation: string;
-  confidence_score: number | null;
-  follow_up_date: string | null;
-}
 
 export interface SleeveAllocation {
   ticker: string;

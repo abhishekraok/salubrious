@@ -47,8 +47,6 @@ def make_policy(
     target_international_pct: float | None = None,
     target_value_tilted_pct: float | None = None,
     target_small_cap_pct: float | None = None,
-    next_review_date=None,
-    last_review_date=None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         baseline_annual_spending=baseline_annual_spending,
@@ -61,6 +59,4 @@ def make_policy(
         target_international_pct=target_international_pct,
         target_value_tilted_pct=target_value_tilted_pct,
         target_small_cap_pct=target_small_cap_pct,
-        next_review_date=next_review_date,
-        last_review_date=last_review_date,
     )
