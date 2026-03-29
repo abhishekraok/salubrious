@@ -3,12 +3,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .database import Base, engine
+from .database import Base, engine, run_migrations
 from .routers import allocation, auth, insights, policy, portfolio, prices, profile_data, recommendation, review, settings, spending
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    run_migrations()
     Base.metadata.create_all(bind=engine)
     yield
 
