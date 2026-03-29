@@ -21,26 +21,40 @@ def get_db():
         db.close()
 
 
+def _migrate_table(conn, inspector, table: str, columns: list[tuple[str, str]]):
+    """Add missing columns to an existing table."""
+    if table not in inspector.get_table_names():
+        return
+    existing = {col["name"] for col in inspector.get_columns(table)}
+    for col_name, col_type in columns:
+        if col_name not in existing:
+            conn.execute(text(
+                f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type}"
+            ))
+
+
 def run_migrations():
     """Add columns that may be missing from older databases."""
     inspector = inspect(engine)
     if "user_profiles" not in inspector.get_table_names():
         return  # Fresh DB; create_all will handle everything
 
-    existing = {col["name"] for col in inspector.get_columns("user_profiles")}
-    migrations = [
-        ("email", "VARCHAR(255)"),
-        ("password_hash", "VARCHAR(255)"),
-        ("google_id", "VARCHAR(255)"),
-        ("avatar_url", "VARCHAR(500)"),
-    ]
-
     with engine.begin() as conn:
-        for col_name, col_type in migrations:
-            if col_name not in existing:
-                conn.execute(text(
-                    f"ALTER TABLE user_profiles ADD COLUMN {col_name} {col_type}"
-                ))
+        # Auth columns on user_profiles
+        _migrate_table(conn, inspector, "user_profiles", [
+            ("email", "VARCHAR(255)"),
+            ("password_hash", "VARCHAR(255)"),
+            ("google_id", "VARCHAR(255)"),
+            ("avatar_url", "VARCHAR(500)"),
+        ])
+
+        # Spending/planning columns on investment_policies
+        _migrate_table(conn, inspector, "investment_policies", [
+            ("expected_years_remaining", "INTEGER"),
+            ("expected_years_earning", "INTEGER"),
+            ("expected_after_tax_salary", "REAL"),
+            ("withdrawal_rate_pct", "REAL DEFAULT 3.5"),
+        ])
 
         # Give existing users without credentials a default login
         # so they can access their data after the auth migration
