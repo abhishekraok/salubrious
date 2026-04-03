@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
-from .routers import allocation, insights, policy, portfolio, prices, recommendation, settings, spending
+from .routers import allocation, auth, insights, policy, portfolio, prices, recommendation, settings, spending
 
 
 @asynccontextmanager
@@ -23,6 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(policy.router)
 app.include_router(settings.router)
 app.include_router(portfolio.router)

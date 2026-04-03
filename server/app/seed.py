@@ -25,7 +25,7 @@ def seed():
         return
 
     # User
-    user = UserProfile(name="Default User", currency="USD")
+    user = UserProfile(name="Default User", email="default@example.com", currency="USD")
     db.add(user)
     db.flush()
 

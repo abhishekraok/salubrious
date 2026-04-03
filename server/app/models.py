@@ -11,6 +11,8 @@ class UserProfile(Base):
     __tablename__ = "user_profiles"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    google_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
     name: Mapped[str] = mapped_column(String(100))
     currency: Mapped[str] = mapped_column(String(3), default="USD")
     created_at: Mapped[datetime] = mapped_column(default=func.now())

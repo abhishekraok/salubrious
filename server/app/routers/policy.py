@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..auth import get_current_user
 from ..database import get_db
-from ..models import InvestmentPolicy, PortfolioSleeve
+from ..models import InvestmentPolicy, PortfolioSleeve, UserProfile
 from ..schemas import (
     InvestmentPolicyOut,
     InvestmentPolicyUpdate,
@@ -14,21 +15,21 @@ from ..schemas import (
 router = APIRouter(prefix="/api/policy", tags=["policy"])
 
 
-def _get_policy(db: Session) -> InvestmentPolicy:
-    policy = db.query(InvestmentPolicy).first()
+def _get_policy(user: UserProfile, db: Session) -> InvestmentPolicy:
+    policy = db.query(InvestmentPolicy).filter(InvestmentPolicy.user_id == user.id).first()
     if not policy:
         raise HTTPException(404, "No policy found")
     return policy
 
 
 @router.get("", response_model=InvestmentPolicyOut)
-def get_policy(db: Session = Depends(get_db)):
-    return _get_policy(db)
+def get_policy(user: UserProfile = Depends(get_current_user), db: Session = Depends(get_db)):
+    return _get_policy(user, db)
 
 
 @router.put("", response_model=InvestmentPolicyOut)
-def update_policy(data: InvestmentPolicyUpdate, db: Session = Depends(get_db)):
-    policy = _get_policy(db)
+def update_policy(data: InvestmentPolicyUpdate, user: UserProfile = Depends(get_current_user), db: Session = Depends(get_db)):
+    policy = _get_policy(user, db)
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(policy, k, v)
     db.commit()
@@ -39,14 +40,14 @@ def update_policy(data: InvestmentPolicyUpdate, db: Session = Depends(get_db)):
 # --- Sleeves ---
 
 @router.get("/sleeves", response_model=list[PortfolioSleeveOut])
-def get_sleeves(db: Session = Depends(get_db)):
-    policy = _get_policy(db)
+def get_sleeves(user: UserProfile = Depends(get_current_user), db: Session = Depends(get_db)):
+    policy = _get_policy(user, db)
     return db.query(PortfolioSleeve).filter(PortfolioSleeve.policy_id == policy.id).order_by(PortfolioSleeve.ticker).all()
 
 
 @router.post("/sleeves", response_model=PortfolioSleeveOut)
-def create_sleeve(data: PortfolioSleeveCreate, db: Session = Depends(get_db)):
-    policy = _get_policy(db)
+def create_sleeve(data: PortfolioSleeveCreate, user: UserProfile = Depends(get_current_user), db: Session = Depends(get_db)):
+    policy = _get_policy(user, db)
     sleeve = PortfolioSleeve(policy_id=policy.id, **data.model_dump())
     db.add(sleeve)
     db.commit()

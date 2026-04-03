@@ -8,6 +8,7 @@ from pydantic import BaseModel
 class UserProfileOut(BaseModel):
     id: int
     name: str
+    email: Optional[str] = None
     currency: str
 
     model_config = {"from_attributes": True}

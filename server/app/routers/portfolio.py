@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from ..auth import get_current_user
 from ..database import get_db
 from ..fund_metadata import lookup_fund
 from ..models import Account, Holding, InvestmentPolicy, PortfolioSleeve, UserProfile
@@ -26,14 +27,12 @@ router = APIRouter(prefix="/api", tags=["portfolio"])
 # --- Accounts ---
 
 @router.get("/accounts", response_model=list[AccountOut])
-def list_accounts(db: Session = Depends(get_db)):
-    user = db.query(UserProfile).first()
+def list_accounts(user: UserProfile = Depends(get_current_user), db: Session = Depends(get_db)):
     return db.query(Account).filter(Account.user_id == user.id).all()
 
 
 @router.post("/accounts", response_model=AccountOut)
-def create_account(data: AccountCreate, db: Session = Depends(get_db)):
-    user = db.query(UserProfile).first()
+def create_account(data: AccountCreate, user: UserProfile = Depends(get_current_user), db: Session = Depends(get_db)):
     account = Account(user_id=user.id, **data.model_dump())
     db.add(account)
     db.commit()
@@ -72,8 +71,7 @@ def list_holdings(account_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/holdings", response_model=list[HoldingOut])
-def list_all_holdings(db: Session = Depends(get_db)):
-    user = db.query(UserProfile).first()
+def list_all_holdings(user: UserProfile = Depends(get_current_user), db: Session = Depends(get_db)):
     accounts = db.query(Account).filter(Account.user_id == user.id).all()
     account_ids = [a.id for a in accounts]
     return db.query(Holding).filter(Holding.account_id.in_(account_ids)).order_by(Holding.ticker).all()
@@ -125,9 +123,8 @@ def delete_holding(holding_id: int, db: Session = Depends(get_db)):
 # --- CSV Export ---
 
 @router.get("/holdings/export")
-def export_holdings_csv(db: Session = Depends(get_db)):
+def export_holdings_csv(user: UserProfile = Depends(get_current_user), db: Session = Depends(get_db)):
     """Export all holdings as a CSV file."""
-    user = db.query(UserProfile).first()
     accounts = db.query(Account).filter(Account.user_id == user.id).all()
     account_map = {a.id: a for a in accounts}
     account_ids = [a.id for a in accounts]
