@@ -1,5 +1,7 @@
 # Salubrious Specification
 
+> **Document status:** This specification preserves both the current product contract and deferred design concepts. The current routed interface contains Today, Plan, Holdings, Allocation, and Spending; category-level insights appear on Today. Sections explicitly marked **Deferred** are not implemented in the current interface and do not imply a delivery date or sequence.
+
 ## 1. Purpose
 
 Build a **personal finance / portfolio tracking app** optimized for the user’s **long-term well-being**, not engagement.
@@ -96,9 +98,13 @@ The app must do these jobs well:
 - top-level recommended action engine
 - cash-flow-aware rebalance suggestions
 - safe assets / spending runway display
-- review schedule tracking
-- basic decision journal
-- behavioral guardrails in UI
+
+### Deferred from the current MVP
+
+- review schedule tracking and a standalone Review experience
+- decision journal
+- journal-backed override friction, cooling-off periods, and other behavioral guardrail controls
+- standalone Settings experience
 
 ### Nice-to-have after MVP
 
@@ -123,19 +129,15 @@ The app must do these jobs well:
 
 ## 6. Information Architecture
 
-Use a simple left nav or tab bar with these sections:
+The current left navigation contains these sections:
 
 1. **Today**
 2. **Plan**
-3. **Allocation**
-4. **Spending**
-5. **Review**
-6. **Settings**
+3. **Holdings**
+4. **Allocation** (fund targeting mode only)
+5. **Spending**
 
-Optional later:
-7\. **Taxes**
-8\. **Accounts**
-9\. **Journal**
+Category-level insights are integrated into Today rather than exposed as a standalone page. Review, Journal, and Settings are deferred experience concepts, not current routes.
 
 ---
 
@@ -193,17 +195,17 @@ Display exactly one primary recommendation:
 - No action needed
 - Rebalance with new contributions only
 - Rebalance required
-- Review target allocation
+- Review target allocation *(deferred)*
 - Spending runway below target
 - Crash plan trigger active
-- Annual review due
+- Annual review due *(deferred)*
 
 Below the main line, show a short explanation.
 
 Example:
 
 - **No action needed**\
-  All allocation sleeves are within tolerance bands. Next scheduled review: July 1, 2026.
+  All allocation sleeves are within tolerance bands. Everything is within policy.
 
 Or:
 
@@ -217,16 +219,16 @@ Show 4–6 compact summary blocks:
 - Portfolio status: On plan / Watch / Action needed
 - Spending runway: e.g. 4.2 years safe spending funded
 - Safe asset level: e.g. \$460,000 vs target \$400,000
-- Review schedule: next review date
+- Review schedule: next review date *(deferred)*
 - Last action taken
-- Decision journal status (optional)
+- Decision journal status *(deferred)*
 
 ### Secondary section: active issues
 
 Only show items requiring attention:
 
 - assets outside hard band
-- review overdue
+- review overdue *(deferred)*
 - crash trigger reached
 - spending floor not sufficiently funded
 
@@ -344,7 +346,7 @@ Each trigger includes:
 - amount or % to deploy
 - notes
 
-### G. Things I do not do
+### G. Things I do not do *(deferred)*
 
 Freeform precommitment list, e.g.:
 
@@ -468,7 +470,9 @@ Outputs should be framed in spending terms, not just wealth terms.
 
 ---
 
-# 8.5 Review Page
+# 8.5 Review Experience *(Deferred)*
+
+This section records a possible future experience. There is no Review route, review log, or decision journal in the current product.
 
 ## Goal
 
@@ -531,7 +535,9 @@ Reason categories:
 
 ---
 
-# 8.6 Settings Page
+# 8.6 Settings Experience *(Deferred)*
+
+This section records a possible future experience. There is no Settings route in the current product.
 
 ## Important settings
 
@@ -639,7 +645,7 @@ Represents a target slice.
 - date
 - note
 
-#### ReviewEntry
+#### ReviewEntry *(deferred)*
 
 - id
 - policy\_id
@@ -649,7 +655,7 @@ Represents a target slice.
 - allocation\_changed\_flag
 - notes
 
-#### JournalEntry
+#### JournalEntry *(deferred)*
 
 - id
 - user\_id
@@ -754,7 +760,7 @@ The output should be a structured object:
 
 ## 11. Behavioral Guardrail Requirements
 
-These are first-class product features, not decoration.
+The current product implements the calm default state and avoids short-term return emphasis. Journal-backed overrides, cooling-off periods, check-in limits, and review-first edits are deferred design concepts.
 
 ### 11.1 Default calm state
 
@@ -763,8 +769,7 @@ This should be the most common app outcome.
 
 ### 11.2 Hidden performance
 
-Performance is available but not prominent.
-User must explicitly navigate to view it.
+Performance views are not part of the current product. If added later, they should remain separate from the primary experience and require explicit navigation.
 
 ### 11.3 No short-term return emphasis
 
@@ -776,9 +781,9 @@ If performance is shown later, default to:
 - 5Y
 - Since inception
 
-### 11.4 Friction before manual override
+### 11.4 Friction before manual override *(deferred)*
 
-If user attempts to manually change target allocation or execute out-of-policy rebalance, show a modal:
+A future implementation could show a modal when a user attempts to manually change target allocation or execute an out-of-policy rebalance:
 
 Fields:
 
@@ -787,15 +792,15 @@ Fields:
 - Would you make the same decision if markets were closed for 30 days?
 - Save journal entry? (required)
 
-### 11.5 Cooling-off option
+### 11.5 Cooling-off option *(deferred)*
 
 Optional setting:
 
 - delay any manual allocation change for 24h before confirmation
 
-### 11.6 Review-first policy edits
+### 11.6 Review-first policy edits *(deferred)*
 
-Strongly encourage major target allocation changes only from the Review page.
+A future Review experience could encourage major target allocation changes only as part of an intentional review.
 
 ---
 
@@ -834,17 +839,17 @@ System suggests a minimum-action rebalance when needed.
 
 System computes safe asset runway from user inputs.
 
-### FR-9 Review logging
+### FR-9 Review logging *(deferred)*
 
-User can log review sessions and policy changes.
+A future implementation could let the user log review sessions and policy changes.
 
-### FR-10 Decision journal
+### FR-10 Decision journal *(deferred)*
 
-User can record discretionary changes and rationale.
+A future implementation could let the user record discretionary changes and rationale.
 
-### FR-11 Settings-based guardrails
+### FR-11 Settings-based guardrails *(deferred)*
 
-User can enable/disable behavioral friction features.
+A future implementation could let the user enable or disable behavioral friction features.
 
 ### FR-12 Persistence
 
@@ -869,7 +874,7 @@ No AI-generated changing advice in core portfolio logic.
 
 ### NFR-4 Auditability
 
-Key decisions should be reconstructable from stored snapshots and review logs.
+Key decisions should be reconstructable from stored snapshots and, if the deferred review workflow is implemented, review logs.
 
 ### NFR-5 Privacy
 
@@ -919,7 +924,7 @@ Suggested modules:
 - `rebalance-engine`
 - `spending-engine`
 - `policy-engine`
-- `journal-service`
+- `journal-service` *(deferred)*
 
 ---
 
@@ -958,7 +963,7 @@ Responsibilities:
 - compute funded status
 - run simple spending scenarios
 
-### ReviewService
+### ReviewService *(deferred)*
 
 Responsibilities:
 
@@ -977,13 +982,13 @@ Responsibilities:
 - As a user, I want to see current vs target allocation so I can understand drift.
 - As a user, I want the app to suggest the lowest-friction rebalance.
 - As a user, I want to know whether my safe assets cover my desired spending runway.
-- As a user, I want to review my policy periodically rather than react daily.
+- *(Deferred)* As a user, I want to review my policy periodically rather than react daily.
 
 ### Behavioral
 
 - As a user, I want the app to avoid showing noisy daily data by default.
-- As a user, I want friction when I try to override my plan impulsively.
-- As a user, I want to log why I changed course so that future me can judge the decision.
+- *(Deferred)* As a user, I want friction when I try to override my plan impulsively.
+- *(Deferred)* As a user, I want to log why I changed course so that future me can judge the decision.
 
 ### Future
 
@@ -1002,13 +1007,14 @@ The MVP is successful if:
 4. App highlights sleeves outside tolerance bands.
 5. App can suggest a simple rebalance action.
 6. App computes safe asset runway from spending inputs.
-7. App supports a review log and decision journal.
-8. App does not show daily gains/losses on primary screens.
-9. App feels calm, minimal, and non-brokerage-like.
+7. App does not show daily gains/losses on primary screens.
+8. App feels calm, minimal, and non-brokerage-like.
 
 ---
 
-## 18. Proposed Build Order
+## 18. Original Build Outline
+
+This historical outline is retained as design context. It is not an active roadmap or delivery commitment; current and deferred scope are defined in Section 5.
 
 ### Phase 1: Static skeleton
 
@@ -1025,11 +1031,11 @@ The MVP is successful if:
 - band logic
 - top recommendation logic
 
-### Phase 3: Spending + review
+### Phase 3: Spending + review concepts
 
 - spending runway calculations
-- review page
-- journal page / journal modal
+- review page *(deferred)*
+- journal page / journal modal *(deferred)*
 
 ### Phase 4: Recommendation refinement
 
@@ -1039,8 +1045,8 @@ The MVP is successful if:
 
 ### Phase 5: Quality polish
 
-- settings
-- guardrail modals
+- settings *(deferred)*
+- guardrail modals *(deferred)*
 - import/export
 - persistence hardening
 
@@ -1101,4 +1107,3 @@ Its central promise is:
 > I will monitor your portfolio continuously, translate it into your life plan, and interrupt you only when action is genuinely justified.
 
 That promise should guide all implementation decisions.
-

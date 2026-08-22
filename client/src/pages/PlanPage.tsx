@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { useApi } from '../hooks/useApi';
@@ -29,23 +29,26 @@ export function PlanPage() {
     target_small_cap_pct: null as number | null,
   });
 
-  useEffect(() => {
-    if (policy) {
-      setObjectiveText(policy.objective_text);
-      setCatForm({
-        target_equity_pct: policy.target_equity_pct,
-        target_international_pct: policy.target_international_pct,
-        target_value_tilted_pct: policy.target_value_tilted_pct,
-        target_small_cap_pct: policy.target_small_cap_pct,
-      });
-    }
-  }, [policy]);
-
   if (!policy || !sleeves) {
     return <p className="text-calm-muted text-sm">Loading...</p>;
   }
 
   const totalPercent = sleeves.reduce((sum, s) => sum + s.target_percent, 0);
+
+  const startEditingObjective = () => {
+    setObjectiveText(policy.objective_text);
+    setEditingObjective(true);
+  };
+
+  const startEditingCategories = () => {
+    setCatForm({
+      target_equity_pct: policy.target_equity_pct,
+      target_international_pct: policy.target_international_pct,
+      target_value_tilted_pct: policy.target_value_tilted_pct,
+      target_small_cap_pct: policy.target_small_cap_pct,
+    });
+    setEditingCategories(true);
+  };
 
   const saveObjective = async () => {
     await put('/policy', { objective_text: objectiveText });
@@ -227,7 +230,7 @@ export function PlanPage() {
         ) : (
           <div className="flex justify-between items-start">
             <p className="text-sm text-calm-text leading-relaxed">{policy.objective_text}</p>
-            <Button variant="ghost" onClick={() => setEditingObjective(true)}>Edit</Button>
+            <Button variant="ghost" onClick={startEditingObjective}>Edit</Button>
           </div>
         )}
       </Card>
@@ -268,7 +271,7 @@ export function PlanPage() {
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-sm font-medium text-calm-muted uppercase tracking-wide">Category Targets</h3>
             {!editingCategories && (
-              <Button variant="ghost" onClick={() => setEditingCategories(true)}>Edit</Button>
+              <Button variant="ghost" onClick={startEditingCategories}>Edit</Button>
             )}
           </div>
           {editingCategories ? (
@@ -301,7 +304,7 @@ export function PlanPage() {
               </div>
               <div className="flex gap-2">
                 <Button onClick={saveCategories}>Save</Button>
-                <Button variant="ghost" onClick={() => { setEditingCategories(false); setCatForm({ target_equity_pct: policy.target_equity_pct, target_international_pct: policy.target_international_pct, target_value_tilted_pct: policy.target_value_tilted_pct, target_small_cap_pct: policy.target_small_cap_pct }); }}>Cancel</Button>
+                <Button variant="ghost" onClick={() => setEditingCategories(false)}>Cancel</Button>
               </div>
             </div>
           ) : (

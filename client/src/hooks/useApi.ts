@@ -1,22 +1,66 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { get } from '../api/client';
 
-export function useApi<T>(path: string) {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface ApiState<T> {
+  path: string;
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+}
 
-  const refetch = useCallback(() => {
-    setLoading(true);
-    get<T>(path)
-      .then(setData)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+export function useApi<T>(path: string) {
+  const [state, setState] = useState<ApiState<T>>({
+    path,
+    data: null,
+    loading: true,
+    error: null,
+  });
+  const requestId = useRef(0);
+
+  const load = useCallback(async () => {
+    const currentRequestId = ++requestId.current;
+
+    try {
+      const data = await get<T>(path);
+      if (currentRequestId === requestId.current) {
+        setState({ path, data, loading: false, error: null });
+      }
+    } catch (error) {
+      if (currentRequestId === requestId.current) {
+        setState((current) => ({
+          path,
+          data: current.path === path ? current.data : null,
+          loading: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }));
+      }
+    }
   }, [path]);
 
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    void load();
 
-  return { data, loading, error, refetch };
+    return () => {
+      requestId.current += 1;
+    };
+  }, [load]);
+
+  const refetch = useCallback(() => {
+    setState((current) => ({
+      path,
+      data: current.path === path ? current.data : null,
+      loading: true,
+      error: null,
+    }));
+    void load();
+  }, [load, path]);
+
+  const isCurrentPath = state.path === path;
+
+  return {
+    data: isCurrentPath ? state.data : null,
+    loading: isCurrentPath ? state.loading : true,
+    error: isCurrentPath ? state.error : null,
+    refetch,
+  };
 }

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
 from typing import Optional
 
 from ..models import InvestmentPolicy
@@ -101,9 +100,8 @@ def compute_today(
     Priority ordering:
     1. Spending runway below target
     2. Rebalance required (hard band breach)
-    3. Annual review due / overdue
-    4. Rebalance with contributions only (soft band breach)
-    5. No action needed (default calm state)
+    3. Mild drift (soft band breach)
+    4. No action needed (default calm state)
     """
     issues: list[str] = []
     headline = "No action needed"

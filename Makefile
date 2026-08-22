@@ -1,3 +1,5 @@
+PYTHON ?= python3
+
 .PHONY: server client dev seed db-reset
 
 server:
@@ -10,8 +12,8 @@ dev:
 	@echo "Run 'make server' and 'make client' in separate terminals"
 
 seed:
-	cd server && python -m app.seed
+	cd server && $(PYTHON) -m app.seed
 
 db-reset:
 	rm -f server/salubrious.db
-	cd server && python -m app.seed
+	cd server && $(PYTHON) -m app.seed

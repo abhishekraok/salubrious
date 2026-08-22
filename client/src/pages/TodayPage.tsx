@@ -80,7 +80,7 @@ function InsightGauge({ title, entry, color, basis }: { title: string; entry: Br
   const status = driftStatus(entry.current_pct, entry.target_pct);
   return (
     <div className="flex flex-col items-center">
-      <GaugeRing label={entry.label} current={entry.current_pct} target={entry.target_pct} max={100} color={color} />
+      <GaugeRing label={title} current={entry.current_pct} target={entry.target_pct} max={100} color={color} />
       <span className="text-[10px] text-calm-muted">{basis}</span>
       <div className="mt-1">
         <Badge status={status}>{status === 'ok' ? 'OK' : status === 'watch' ? 'Watch' : 'Action'}</Badge>

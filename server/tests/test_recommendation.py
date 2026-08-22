@@ -1,9 +1,7 @@
 """Tests for the recommendation engine (Today page)."""
-from datetime import date, timedelta
 
-import pytest
 from app.engines.allocation import AllocationResult, SleeveAllocation
-from app.engines.bands import classify_drift
+from app.engines.breakdown import BreakdownEntry, PortfolioBreakdown
 from app.engines.recommendation import compute_today
 from app.engines.rebalance import RebalanceSuggestion
 from app.engines.spending import SpendingRunway
@@ -112,12 +110,25 @@ def _make_action_rebalance() -> RebalanceSuggestion:
     )
 
 
+def _make_asset_type_breakdown(
+    equity_current: float,
+    equity_target: float,
+) -> PortfolioBreakdown:
+    return PortfolioBreakdown(
+        asset_type=[
+            BreakdownEntry("Equities", equity_current, equity_target),
+            BreakdownEntry(
+                "Safe Assets",
+                100.0 - equity_current,
+                100.0 - equity_target,
+            ),
+        ],
+    )
+
+
 class TestComputeTodayCalm:
     def test_all_calm_returns_calm_status(self):
-        policy = make_policy(
-            safe_asset_runway_years_target=4.0,
-            next_review_date=date.today() + timedelta(days=30),
-        )
+        policy = make_policy(safe_asset_runway_years_target=4.0)
         result = compute_today(
             _make_ok_allocation(),
             _make_secure_runway(),
@@ -129,10 +140,7 @@ class TestComputeTodayCalm:
         assert result.active_issues == []
 
     def test_calm_summary_cards_present(self):
-        policy = make_policy(
-            safe_asset_runway_years_target=4.0,
-            next_review_date=date.today() + timedelta(days=30),
-        )
+        policy = make_policy(safe_asset_runway_years_target=4.0)
         result = compute_today(
             _make_ok_allocation(),
             _make_secure_runway(),
@@ -140,18 +148,13 @@ class TestComputeTodayCalm:
             _make_calm_rebalance(),
         )
         labels = [c.label for c in result.summary_cards]
-        assert "Portfolio Status" in labels
-        assert "Spending Runway" in labels
-        assert "Next Review" in labels
+        assert labels == ["Portfolio Status", "Spending Runway", "Safe Assets"]
 
 
 class TestComputeTodaySpendingPriority:
     def test_low_runway_triggers_action(self):
         # Runway below target (2 years < 4 year target)
-        policy = make_policy(
-            safe_asset_runway_years_target=4.0,
-            next_review_date=date.today() + timedelta(days=30),
-        )
+        policy = make_policy(safe_asset_runway_years_target=4.0)
         result = compute_today(
             _make_ok_allocation(),
             _make_constrained_runway(years=2.0),
@@ -185,10 +188,7 @@ class TestComputeTodaySpendingPriority:
 
 class TestComputeTodayHardBreach:
     def test_hard_breach_triggers_action(self):
-        policy = make_policy(
-            safe_asset_runway_years_target=4.0,
-            next_review_date=date.today() + timedelta(days=30),
-        )
+        policy = make_policy(safe_asset_runway_years_target=4.0)
         result = compute_today(
             _make_allocation_with_hard_breach(),
             _make_secure_runway(),
@@ -220,64 +220,9 @@ class TestComputeTodayHardBreach:
         assert result.explanation == rebalance.rationale
 
 
-class TestComputeTodayReviewOverdue:
-    def test_overdue_review_triggers_watch(self):
-        policy = make_policy(
-            safe_asset_runway_years_target=4.0,
-            next_review_date=date.today() - timedelta(days=1),
-        )
-        result = compute_today(
-            _make_ok_allocation(),
-            _make_secure_runway(),
-            policy,
-            _make_calm_rebalance(),
-        )
-        assert result.status == "watch"
-        assert "review" in result.headline.lower()
-
-    def test_overdue_review_in_active_issues(self):
-        policy = make_policy(
-            safe_asset_runway_years_target=4.0,
-            next_review_date=date.today() - timedelta(days=1),
-        )
-        result = compute_today(
-            _make_ok_allocation(),
-            _make_secure_runway(),
-            policy,
-            _make_calm_rebalance(),
-        )
-        assert any("review" in issue.lower() for issue in result.active_issues)
-
-    def test_future_review_date_not_overdue(self):
-        policy = make_policy(
-            safe_asset_runway_years_target=4.0,
-            next_review_date=date.today() + timedelta(days=1),
-        )
-        result = compute_today(
-            _make_ok_allocation(),
-            _make_secure_runway(),
-            policy,
-            _make_calm_rebalance(),
-        )
-        assert result.status == "calm"
-
-    def test_none_review_date_not_overdue(self):
-        policy = make_policy(safe_asset_runway_years_target=4.0, next_review_date=None)
-        result = compute_today(
-            _make_ok_allocation(),
-            _make_secure_runway(),
-            policy,
-            _make_calm_rebalance(),
-        )
-        assert result.status == "calm"
-
-
 class TestComputeTodaySoftBreach:
     def test_soft_breach_only_triggers_watch(self):
-        policy = make_policy(
-            safe_asset_runway_years_target=4.0,
-            next_review_date=date.today() + timedelta(days=30),
-        )
+        policy = make_policy(safe_asset_runway_years_target=4.0)
         result = compute_today(
             _make_allocation_with_soft_breach(),
             _make_secure_runway(),
@@ -309,6 +254,72 @@ class TestComputeTodaySoftBreach:
         # Headline should be rebalance, not drift
         assert "rebalance" in result.headline.lower()
         assert "drift" not in result.headline.lower()
+
+
+class TestComputeTodayCategoryMode:
+    def test_category_mode_ignores_fund_level_breach_when_categories_are_on_target(self):
+        policy = make_policy(
+            safe_asset_runway_years_target=4.0,
+            targeting_mode="category",
+        )
+        result = compute_today(
+            _make_allocation_with_hard_breach(),
+            _make_secure_runway(),
+            policy,
+            _make_action_rebalance(),
+            breakdown=_make_asset_type_breakdown(70.0, 70.0),
+        )
+
+        assert result.status == "calm"
+        assert result.headline == "No action needed"
+        assert result.active_issues == []
+        portfolio_card = next(
+            card for card in result.summary_cards if card.label == "Portfolio Status"
+        )
+        assert portfolio_card.value == "On plan"
+        assert portfolio_card.status == "calm"
+
+    def test_category_hard_breach_drives_action_from_calm_fund_allocation(self):
+        policy = make_policy(
+            safe_asset_runway_years_target=4.0,
+            targeting_mode="category",
+        )
+        result = compute_today(
+            _make_ok_allocation(),
+            _make_secure_runway(),
+            policy,
+            _make_calm_rebalance(),
+            breakdown=_make_asset_type_breakdown(95.0, 70.0),
+        )
+
+        assert result.status == "action"
+        assert result.headline == "Rebalance required"
+        assert result.explanation == "Equities is 25.0pp above target."
+        assert result.active_issues == [
+            "Equities (Asset Type) is 25.0pp above target "
+            "(95.0% actual vs 70.0% target)."
+        ]
+
+    def test_category_soft_breach_drives_watch_status(self):
+        policy = make_policy(
+            safe_asset_runway_years_target=4.0,
+            targeting_mode="category",
+        )
+        result = compute_today(
+            _make_ok_allocation(),
+            _make_secure_runway(),
+            policy,
+            _make_calm_rebalance(),
+            breakdown=_make_asset_type_breakdown(76.0, 80.0),
+        )
+
+        assert result.status == "watch"
+        assert result.headline == "Mild drift detected"
+        assert result.explanation == "Safe Assets is 4.0pp above target."
+        assert result.active_issues == [
+            "Safe Assets (Asset Type) is 4.0pp above target "
+            "(24.0% actual vs 20.0% target)."
+        ]
 
 
 class TestComputeTodaySummaryCards:
@@ -346,28 +357,3 @@ class TestComputeTodaySummaryCards:
         )
         spending_card = next(c for c in result.summary_cards if c.label == "Spending Runway")
         assert "5.0" in spending_card.value
-
-    def test_review_card_action_when_overdue(self):
-        policy = make_policy(
-            safe_asset_runway_years_target=4.0,
-            next_review_date=date.today() - timedelta(days=10),
-        )
-        result = compute_today(
-            _make_ok_allocation(),
-            _make_secure_runway(),
-            policy,
-            _make_calm_rebalance(),
-        )
-        review_card = next(c for c in result.summary_cards if c.label == "Next Review")
-        assert review_card.status == "action"
-
-    def test_review_card_not_set_shows_not_set(self):
-        policy = make_policy(safe_asset_runway_years_target=4.0, next_review_date=None)
-        result = compute_today(
-            _make_ok_allocation(),
-            _make_secure_runway(),
-            policy,
-            _make_calm_rebalance(),
-        )
-        review_card = next(c for c in result.summary_cards if c.label == "Next Review")
-        assert review_card.value == "Not set"
