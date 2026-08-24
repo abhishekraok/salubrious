@@ -9,6 +9,9 @@ build/
 # Database
 *.db
 
+# Private local financial data and generated imports
+.private/
+
 # Node
 node_modules/
 client/dist/
