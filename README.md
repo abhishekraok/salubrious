@@ -44,6 +44,7 @@ Open http://localhost:5173. Prices auto-refresh on first load.
 | **Plan** | Investment policy, targeting mode toggle, fund/category targets |
 | **Holdings** | Account and holding management, CSV import/export |
 | **Allocation** | Per-fund drift and band status (fund mode only) |
+| **Decisions** | Private, benchmark-relative review of historical allocation actions |
 | **Spending** | Safe asset runway, cash reserve, funded status, what-if scenarios, and simulation |
 
 Category-level portfolio insights are shown on the Today page. Review scheduling, a decision journal, and behavioral override guardrails are deferred and are not part of the current routed interface.
@@ -76,6 +77,10 @@ make db-reset
 ```
 
 Holdings can be exported/imported via CSV on the Holdings page.
+
+Historical transaction and decision-quality imports live only under the gitignored
+`.private/` directory. See [Decision quality analysis](docs/decision-quality.md) for
+the normalized formats, importer command, source precedence, and methodology.
 
 ## Development
 

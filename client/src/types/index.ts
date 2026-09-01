@@ -157,3 +157,126 @@ export interface SpendingRunway {
   funded_status: string;
   above_minimum_reserve_by: number;
 }
+
+export type DecisionOutcome = 'ahead' | 'similar' | 'behind';
+export type DecisionMaturity = 'mature' | 'developing';
+export type DecisionScoreStatus = 'scored' | 'excluded' | 'missing_prices' | 'duplicate';
+
+export interface DecisionQualityBenchmark {
+  ticker: string;
+  name: string;
+  horizon_days: number;
+  deadband_pct_points: number;
+  price_field: string;
+  market_data_source: string;
+  as_of_date: string;
+}
+
+export interface DecisionQualityCoverage {
+  source_files: number;
+  ledger_transactions: number;
+  performance_periods: number;
+  decision_rows: number;
+  buy_like_candidate_rows: number;
+  automatic_or_cash_rows_not_treated_as_decisions: number;
+  date_start: string;
+  date_end: string;
+}
+
+export interface DecisionQualityPrimarySummary {
+  basis: string;
+  mature_actions: number;
+  developing_actions: number;
+  weighted_advantage_pct_points: number | null;
+  weighted_outcome: DecisionOutcome | null;
+  descriptive_opportunity_cost_non_additive: number;
+  interpretation: string;
+}
+
+export interface DecisionQualitySummary {
+  benchmark_ticker: string;
+  horizon_days: number;
+  deadband_pct_points: number;
+  total_actions: number;
+  scored_actions: number;
+  mature_actions: number;
+  developing_actions: number;
+  ahead_actions: number;
+  similar_actions: number;
+  behind_actions: number;
+  excluded_actions: number;
+  missing_price_actions: number;
+  duplicate_actions: number;
+  scored_notional: number;
+  weighted_advantage_pct_points: number | null;
+  weighted_outcome: DecisionOutcome | null;
+  interpretation: string;
+}
+
+export interface DecisionQualityYearBucket {
+  year: number;
+  actions: number;
+  mature: number;
+  developing: number;
+  ahead: number;
+  similar: number;
+  behind: number;
+  weighted_advantage_pct_points: number | null;
+}
+
+export interface DecisionQualityAction {
+  action_id: string;
+  action_date: string;
+  action_type: string;
+  ticker: string | null;
+  notional: number;
+  benchmark_ticker: string;
+  score_status: DecisionScoreStatus;
+  reason: string | null;
+  maturity: DecisionMaturity | null;
+  outcome: DecisionOutcome | null;
+  entry_date: string | null;
+  evaluation_date: string | null;
+  horizon_date: string | null;
+  observed_days: number | null;
+  chosen_return_pct: number | null;
+  benchmark_return_pct: number | null;
+  advantage_pct_points: number | null;
+  opportunity_cost: number | null;
+  institution?: string;
+  account_key?: string;
+  security_name?: string;
+  source_file?: string;
+  parse_confidence?: string;
+  evidence_role?: string;
+}
+
+export interface DecisionQualityReconciliation {
+  assets_sheet_available: boolean;
+  assets_sheet_evidence_role: string | null;
+  assets_sheet_source_modified_time?: string | null;
+  snapshot_rows: number;
+  action_notes: number;
+  reported_completed_notes: number;
+  dated_completed_notes: number;
+  date_symbol_direction_matches_to_pdf_ledger: number;
+  dated_completed_notes_without_date_symbol_direction_match: number;
+  symbols_only_in_sheet: string[];
+  symbols_only_in_pdf_ledgers: string[];
+  interpretation: string;
+}
+
+export interface DecisionQualityResponse {
+  schema_version: number;
+  available: boolean;
+  message?: string;
+  generated_at?: string;
+  benchmark?: DecisionQualityBenchmark;
+  coverage?: DecisionQualityCoverage;
+  primary_summary?: DecisionQualityPrimarySummary;
+  summary?: DecisionQualitySummary;
+  year_buckets?: DecisionQualityYearBucket[];
+  actions?: DecisionQualityAction[];
+  reconciliation?: DecisionQualityReconciliation;
+  limitations?: string[];
+}

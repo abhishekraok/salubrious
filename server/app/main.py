@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
-from .routers import allocation, insights, policy, portfolio, prices, recommendation, settings, spending
+from .routers import allocation, decisions, insights, policy, portfolio, prices, recommendation, settings, spending
 
 
 @asynccontextmanager
@@ -31,6 +31,7 @@ app.include_router(recommendation.router)
 app.include_router(prices.router)
 app.include_router(spending.router)
 app.include_router(insights.router)
+app.include_router(decisions.router)
 
 
 @app.get("/api/health")

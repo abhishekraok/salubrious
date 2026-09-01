@@ -4,6 +4,7 @@ import { TodayPage } from './pages/TodayPage'
 import { PlanPage } from './pages/PlanPage'
 import { AllocationPage } from './pages/AllocationPage'
 import { SpendingPage } from './pages/SpendingPage'
+import { DecisionQualityPage } from './pages/DecisionQualityPage'
 import { useApi } from './hooks/useApi'
 import type { InvestmentPolicy } from './types'
 
@@ -25,7 +26,7 @@ function App() {
         <Route path="/holdings" element={<HoldingsPage />} />
         <Route path="/allocation" element={<AllocationGuard />} />
         <Route path="/spending" element={<SpendingPage />} />
-
+        <Route path="/decisions" element={<DecisionQualityPage />} />
       </Route>
     </Routes>
   )
